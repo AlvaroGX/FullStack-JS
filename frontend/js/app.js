@@ -134,11 +134,11 @@ async function enviar() {
     const data = await res.json();
 
     // respuesta IA
-    chat.innerHTML += `<p><b>IA:</b> ${data.respuesta}</p>`;
+    chat.innerHTML += `<p><b>IA:</b> ${data.respuesta || data.mensaje || JSON.stringify(data)}</p>`;
     chat.scrollTop = chat.scrollHeight;
 
   } catch (error) {
-    chat.innerHTML += `<p style="color:red;">Error con IA</p>`;
+    chat.innerHTML += `<p style="color:red;">Error: ${error.message}</p>`;
   }
 }
 
