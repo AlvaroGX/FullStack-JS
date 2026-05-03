@@ -1,0 +1,23 @@
+{
+  "name": "inventario-app",
+  "version": "1.0.0",
+  "description": "Gestión de inventario fullstack con Node.js, Express y MongoDB",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "mongodb": "^7.2.0",
+    "mongoose": "^8.23.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
