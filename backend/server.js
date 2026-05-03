@@ -19,6 +19,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ── Rutas API ────────────────────────────────────────────
 app.use('/api/productos', require('./routes/productos'));
+app.use('/api/chat', require('./routes/chat'));
 
 
 // Ruta de salud (útil para el host)
