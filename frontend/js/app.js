@@ -109,6 +109,38 @@ async function cargarDashboard() {
     mostrarToast('Error al cargar el dashboard', 'error');
   }
 }
+async function enviar() {
+  const input = document.getElementById("msg");
+  const mensaje = input.value;
+
+  if (!mensaje) return;
+
+  const chat = document.getElementById("chat");
+
+  // mensaje usuario
+  chat.innerHTML += `<p><b>Tú:</b> ${mensaje}</p>`;
+
+  input.value = "";
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ mensaje })
+    });
+
+    const data = await res.json();
+
+    // respuesta IA
+    chat.innerHTML += `<p><b>IA:</b> ${data.respuesta}</p>`;
+    chat.scrollTop = chat.scrollHeight;
+
+  } catch (error) {
+    chat.innerHTML += `<p style="color:red;">Error con IA</p>`;
+  }
+}
 
 // ── Productos ─────────────────────────────────────────
 async function cargarProductos() {

@@ -7,7 +7,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static("public"));
+
 
 // ── Middlewares ──────────────────────────────────────────
 app.use(cors());
@@ -20,6 +20,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // ── Rutas API ────────────────────────────────────────────
 app.use('/api/productos', require('./routes/productos'));
 
+
 // Ruta de salud (útil para el host)
 app.get('/api/health', (req, res) => {
   res.json({
@@ -31,6 +32,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Cualquier otra ruta sirve el frontend (SPA)
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
@@ -59,5 +61,6 @@ mongoose.connect(MONGODB_URI)
 mongoose.connection.on('error', err => {
   console.error('❌ Error de MongoDB:', err.message);
 });
+
 
 module.exports = app;
