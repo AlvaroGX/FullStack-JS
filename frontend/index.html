@@ -3,153 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>InventApp — Gestión de Inventario</title>
+  <title>TEMU Clone - Compra inteligente</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="icon" href="/favicon.png" />
 </head>
 <body>
 
-  <!-- HEADER -->
+  <!-- HEADER TEMU STYLE -->
   <header class="header">
-    <div class="header-inner">
-      <div class="brand">
-        <span class="brand-icon">⬡</span>
-        <span class="brand-name">Invent<em>App</em></span>
+    <div class="header-top">
+      <div class="container">
+        <span class="logo">TEMU</span>
+        <div class="search-bar">
+          <input type="text" id="buscarInput" placeholder="Buscar productos..." />
+          <button onclick="buscarProductos()">🔍</button>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="toggleCart()">🛒 <span id="cartCount">0</span></button>
+          <div id="userMenu">
+            <button class="btn-login" id="btnLogin" onclick="abrirLogin()">Iniciar Sesión</button>
+          </div>
+        </div>
       </div>
-      <nav class="nav">
-        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-        <button class="nav-btn" data-view="productos">Productos</button>
-      </nav>
-      <button class="btn-primary" id="btnNuevoProducto">+ Nuevo Producto</button>
     </div>
+    <nav class="nav-categories" id="navCategorias">
+      <div class="container">
+        <button class="cat-btn active" onclick="filtrarCategoria('', this)">Todo</button>
+        <button class="cat-btn" onclick="filtrarCategoria('Electrónica', this)">Electrónica</button>
+        <button class="cat-btn" onclick="filtrarCategoria('Hogar', this)">Hogar</button>
+        <button class="cat-btn" onclick="filtrarCategoria('Moda', this)">Moda</button>
+        <button class="cat-btn" onclick="filtrarCategoria('Deportes', this)">Deportes</button>
+        <button class="cat-btn" onclick="filtrarCategoria('Juguetes', this)">Juguetes</button>
+      </div>
+    </nav>
   </header>
 
-  <!-- MAIN -->
+  <!-- MAIN CONTENT -->
   <main class="main">
-
-    <!-- DASHBOARD VIEW -->
-    <section class="view active" id="view-dashboard">
-      <div class="section-header">
-        <h1>Panel de Control</h1>
-        <p class="subtitle">Resumen de tu inventario en tiempo real</p>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total Productos</div>
-          <div class="stat-value" id="stat-total">—</div>
-          <div class="stat-badge neutral">registros</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Valor del Inventario</div>
-          <div class="stat-value" id="stat-valor">—</div>
-          <div class="stat-badge success">S/ total</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Stock Bajo (&le;5)</div>
-          <div class="stat-value warning" id="stat-bajo">—</div>
-          <div class="stat-badge warning">atención</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Sin Stock</div>
-          <div class="stat-value danger" id="stat-sin">—</div>
-          <div class="stat-badge danger">urgente</div>
-        </div>
-      </div>
-
-      <div class="recent-section">
-        <h2>Productos con Stock Crítico</h2>
-        <div id="tabla-criticos" class="tabla-wrap"></div>
+    <!-- HERO -->
+    <section class="hero" id="heroSection">
+      <div class="container">
+        <h1>Ofertas de hasta 90% OFF</h1>
+        <p>Compra productos de calidad a precios increíbles</p>
+        <button class="btn-hero" onclick="scrollToProducts()">Ver Ofertas</button>
       </div>
     </section>
 
-    <!-- PRODUCTOS VIEW -->
-    <section class="view" id="view-productos">
-      <div class="section-header">
-        <h1>Inventario</h1>
-        <p class="subtitle">Gestiona todos tus productos</p>
+    <!-- FLASH DEALS -->
+    <section class="section" id="flashDeals">
+      <div class="container">
+        <div class="section-header">
+          <h2>⚡ Ofertas Relámpago</h2>
+          <a href="#" onclick="filtrarCategoria('', null, 'descuento')">Ver todo →</a>
+        </div>
+        <div class="products-grid" id="flashProducts"></div>
       </div>
-
-      <div class="toolbar">
-        <input type="text" id="buscarInput" class="input-search" placeholder="Buscar producto..."/>
-        <select id="categoriaFiltro" class="input-select">
-          <option value="">Todas las categorías</option>
-        </select>
-        <select id="ordenFiltro" class="input-select">
-          <option value="">Más reciente</option>
-          <option value="nombre">Nombre A-Z</option>
-          <option value="precio">Precio</option>
-          <option value="stock">Stock</option>
-        </select>
-        <button class="btn-secondary" id="btnBuscar">Filtrar</button>
-      </div>
-
-      <div id="tabla-productos" class="tabla-wrap"></div>
     </section>
 
+    <!-- ALL PRODUCTS -->
+    <section class="section" id="productosSection">
+      <div class="container">
+        <div class="section-header">
+          <h2>🛍️ Todos los Productos</h2>
+          <div class="sort-options">
+            <select id="ordenFiltro" onchange="cargarProductos()">
+              <option value="">Más recientes</option>
+              <option value="precio-asc">Precio: Menor a Mayor</option>
+              <option value="precio-desc">Precio: Mayor a Menor</option>
+              <option value="descuento">Mayor Descuento</option>
+            </select>
+          </div>
+        </div>
+        <div class="products-grid" id="productosGrid"></div>
+      </div>
+    </section>
   </main>
 
-  <!-- MODAL -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal">
+  <!-- PRODUCT DETAIL MODAL -->
+  <div class="modal-overlay" id="productoModal">
+    <div class="modal modal-lg">
       <div class="modal-header">
-        <h2 id="modalTitle">Nuevo Producto</h2>
-        <button class="modal-close" id="modalClose">&times;</button>
+        <h2 id="productoModalTitle">Detalle del Producto</h2>
+        <button onclick="cerrarModal('productoModal')">✕</button>
       </div>
-      <form id="formProducto" class="modal-form">
-        <input type="hidden" id="productoId"/>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nombre *</label>
-            <input type="text" id="nombre" required maxlength="100" placeholder="Ej: Laptop Dell XPS"/>
-          </div>
-          <div class="form-group">
-            <label>Categoría *</label>
-            <input type="text" id="categoria" required placeholder="Ej: Electrónica"/>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Descripción</label>
-          <textarea id="descripcion" rows="2" maxlength="500" placeholder="Descripción opcional..."></textarea>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Precio (S/) *</label>
-            <input type="number" id="precio" required min="0" step="0.01" placeholder="0.00"/>
-          </div>
-          <div class="form-group">
-            <label>Stock *</label>
-            <input type="number" id="stock" required min="0" placeholder="0"/>
-          </div>
-          <div class="form-group">
-            <label>Unidad</label>
-            <input type="text" id="unidad" placeholder="unidad, kg, lt..." value="unidad"/>
-          </div>
-        </div>
-
-        <div id="formError" class="form-error hidden"></div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" id="btnCancelar">Cancelar</button>
-          <button type="submit" class="btn-primary" id="btnGuardar">Guardar</button>
-        </div>
-      </form>
+      <div class="modal-body" id="productoModalBody"></div>
     </div>
   </div>
-  <div style="max-width:600px;margin:auto;">
-  <h2>Chat IA 🤖</h2>
 
-  <div id="chat" style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:auto;"></div>
+  <!-- CART SIDEBAR -->
+  <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+  <aside class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+      <h3>🛒 Mi Carrito</h3>
+      <button onclick="toggleCart()">✕</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-footer" id="cartFooter"></div>
+  </aside>
 
-  <input type="text" id="msg" placeholder="Escribe..." />
-  <button onclick="enviar()">Enviar</button>
-  
-</div>
+  <!-- LOGIN MODAL -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Iniciar Sesión</h2>
+        <button onclick="cerrarModal('loginModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="loginForm">
+          <input type="email" id="loginEmail" placeholder="Email" class="input-field"/>
+          <input type="password" id="loginPass" placeholder="Contraseña" class="input-field"/>
+          <button class="btn-primary full" onclick="login()">Entrar</button>
+          <p class="text-center">¿No tienes cuenta? <a href="#" onclick="mostrarRegistro()">Regístrate</a></p>
+        </div>
+        <div id="registroForm" class="hidden">
+          <input type="text" id="regNombre" placeholder="Nombre completo" class="input-field"/>
+          <input type="email" id="regEmail" placeholder="Email" class="input-field"/>
+          <input type="password" id="regPass" placeholder="Contraseña (mín 6 caracteres)" class="input-field"/>
+          <button class="btn-primary full" onclick="registro()">Registrarse</button>
+          <p class="text-center">¿Ya tienes cuenta? <a href="#" onclick="mostrarLogin()">Inicia Sesión</a></p>
+        </div>
+        <div id="formError" class="form-error hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKOUT MODAL -->
+  <div class="modal-overlay" id="checkoutModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Finalizar Compra</h2>
+        <button onclick="cerrarModal('checkoutModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="checkoutContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL (hidden by default) -->
+  <div id="adminPanel" class="hidden">
+    <div class="container" style="padding: 2rem;">
+      <h2>Panel de Administración</h2>
+      <div class="admin-tabs">
+        <button class="tab-btn active" onclick="showTab('productos', this)">Productos</button>
+        <button class="tab-btn" onclick="showTab('usuarios', this)">Usuarios</button>
+        <button class="tab-btn" onclick="showTab('nuevo', this)">Nuevo Producto</button>
+      </div>
+      <div id="tabProductos" class="tab-content"></div>
+      <div id="tabUsuarios" class="tab-content hidden"></div>
+      <div id="tabNuevo" class="tab-content hidden">
+        <form id="formProducto" class="admin-form" enctype="multipart/form-data">
+          <input type="hidden" id="productoId"/>
+          <input type="text" id="nombre" placeholder="Nombre" required class="input-field"/>
+          <input type="text" id="categoria" placeholder="Categoría" required class="input-field"/>
+          <textarea id="descripcion" placeholder="Descripción" class="input-field" rows="3"></textarea>
+          <div class="form-row">
+            <input type="number" id="precio" placeholder="Precio" step="0.01" required class="input-field"/>
+            <input type="number" id="descuento" placeholder="Descuento %" min="0" max="100" class="input-field"/>
+          </div>
+          <input type="number" id="stock" placeholder="Stock" required class="input-field"/>
+          <div class="file-upload">
+            <label>Imagen del producto:</label>
+            <input type="file" id="imagenFile" accept="image/*" class="input-field"/>
+            <small>O sube una URL: <input type="text" id="imagenUrl" placeholder="https://..." class="input-field" style="margin-top:0.5rem;"></small>
+          </div>
+          <button type="submit" class="btn-primary full">Guardar Producto</button>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- TOAST -->
   <div class="toast" id="toast"></div>

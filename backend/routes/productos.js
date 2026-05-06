@@ -1,23 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const Producto = require('../models/Producto');
+const upload = require('../middleware/upload');
 
 // GET /api/productos - Listar todos los productos
 router.get('/', async (req, res) => {
   try {
-    const { categoria, buscar, orden } = req.query;
+    const { categoria, buscar, orden, activo } = req.query;
     let filtro = {};
 
-    // Filtro por categoría
+    if (activo === 'true') filtro.activo = true;
     if (categoria) filtro.categoria = categoria;
-
-    // Búsqueda por nombre
     if (buscar) filtro.nombre = { $regex: buscar, $options: 'i' };
 
-    // Ordenamiento
-    let sortObj = { createdAt: -1 }; // Por defecto: más reciente primero
+    let sortObj = { createdAt: -1 };
     if (orden === 'nombre') sortObj = { nombre: 1 };
     if (orden === 'precio') sortObj = { precio: 1 };
+    if (orden === '-precio') sortObj = { precio: -1 };
+    if (orden === 'descuento') sortObj = { descuento: -1 };
     if (orden === 'stock') sortObj = { stock: 1 };
 
     const productos = await Producto.find(filtro).sort(sortObj);
@@ -38,10 +38,23 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/productos - Crear producto
-router.post('/', async (req, res) => {
+// POST /api/productos - Crear producto (admin)
+router.post('/', upload.single('imagen'), async (req, res) => {
   try {
-    const producto = new Producto(req.body);
+    const imagen = req.file ? `/uploads/${req.file.filename}` : (req.body.imagen || 'https://via.placeholder.com/300');
+    const producto = new Producto({
+      nombre: req.body.nombre,
+      descripcion: req.body.descripcion,
+      categoria: req.body.categoria,
+      precio: req.body.precio,
+      descuento: req.body.descuento || 0,
+      stock: req.body.stock,
+      unidad: req.body.unidad || 'unidad',
+      imagen: imagen,
+      imagenes: req.body.imagenes || [],
+      destacado: req.body.destacado || false,
+      activo: req.body.activo !== false
+    });
     const nuevo = await producto.save();
     res.status(201).json({ ok: true, mensaje: 'Producto creado exitosamente', producto: nuevo });
   } catch (error) {
@@ -53,12 +66,26 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/productos/:id - Actualizar producto
-router.put('/:id', async (req, res) => {
+// PUT /api/productos/:id - Actualizar producto (admin)
+router.put('/:id', upload.single('imagen'), async (req, res) => {
   try {
+    const updateData = {};
+    if (req.body.nombre !== undefined) updateData.nombre = req.body.nombre;
+    if (req.body.descripcion !== undefined) updateData.descripcion = req.body.descripcion;
+    if (req.body.categoria !== undefined) updateData.categoria = req.body.categoria;
+    if (req.body.precio !== undefined) updateData.precio = req.body.precio;
+    if (req.body.descuento !== undefined) updateData.descuento = req.body.descuento;
+    if (req.body.stock !== undefined) updateData.stock = req.body.stock;
+    if (req.body.unidad !== undefined) updateData.unidad = req.body.unidad;
+    if (req.file) updateData.imagen = `/uploads/${req.file.filename}`;
+    else if (req.body.imagen !== undefined) updateData.imagen = req.body.imagen;
+    if (req.body.imagenes !== undefined) updateData.imagenes = req.body.imagenes;
+    if (req.body.destacado !== undefined) updateData.destacado = req.body.destacado;
+    if (req.body.activo !== undefined) updateData.activo = req.body.activo;
+
     const producto = await Producto.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
     if (!producto) return res.status(404).json({ ok: false, mensaje: 'Producto no encontrado' });

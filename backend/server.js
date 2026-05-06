@@ -7,22 +7,22 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
-
 // ── Middlewares ──────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir archivos estáticos del frontend
+// Servir archivos estáticos del frontend y uploads
 app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ── Rutas API ────────────────────────────────────────────
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/productos', require('./routes/productos'));
-app.use('/api/chat', require('./routes/chat'));
+app.use('/api/usuarios', require('./routes/usuarios'));
+app.use('/api/ordenes', require('./routes/ordenes'));
 
-
-// Ruta de salud (útil para el host)
+// Ruta de salud
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -32,8 +32,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Cualquier otra ruta sirve el frontend (SPA)
-
+// Ruta principal y SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
@@ -47,8 +46,22 @@ if (!MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('✅ MongoDB Atlas conectado correctamente');
+    
+    // Crear admin por defecto si no existe
+    const Usuario = require('./models/Usuario');
+    const adminExiste = await Usuario.findOne({ rol: 'admin' });
+    if (!adminExiste) {
+      await Usuario.create({
+        nombre: 'Administrador',
+        email: 'admin@temu.com',
+        password: 'admin123',
+        rol: 'admin'
+      });
+      console.log('✅ Admin creado: admin@temu.com / admin123');
+    }
+    
     app.listen(PORT, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     });
@@ -58,10 +71,8 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-// Manejo de errores de conexión después de iniciado
 mongoose.connection.on('error', err => {
   console.error('❌ Error de MongoDB:', err.message);
 });
-
 
 module.exports = app;

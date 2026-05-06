@@ -1,247 +1,635 @@
-/* ── InventApp — Frontend JS ─────────────────────────── */
-const API = '/api/productos';
+/* ── TEMU Clone - Main App Logic ───────────────── */
+const API = '/api';
+let carrito = JSON.parse(localStorage.getItem('carrito') || '[]');
+let usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+let token = localStorage.getItem('token');
+let productoSeleccionado = null;
+let cantidadSeleccionada = 1;
 
-// ── Estado ────────────────────────────────────────────
-let modoEdicion = false;
-
-// ── DOM refs ──────────────────────────────────────────
-const navBtns       = document.querySelectorAll('.nav-btn');
-const views         = document.querySelectorAll('.view');
-const modalOverlay  = document.getElementById('modalOverlay');
-const formProducto  = document.getElementById('formProducto');
-const formError     = document.getElementById('formError');
-const modalTitle    = document.getElementById('modalTitle');
-const toast         = document.getElementById('toast');
-
-// ── Navegación ────────────────────────────────────────
-navBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    navBtns.forEach(b => b.classList.remove('active'));
-    views.forEach(v => v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
-    if (btn.dataset.view === 'dashboard') cargarDashboard();
-    if (btn.dataset.view === 'productos') cargarProductos();
-  });
+// ── INIT ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  cargarProductos();
+  cargarFlashDeals();
+  actualizarUI();
+  if (usuario && usuario.rol === 'admin') mostrarAdminPanel();
 });
 
-// ── Modal ─────────────────────────────────────────────
-function abrirModal(titulo = 'Nuevo Producto') {
-  modalTitle.textContent = titulo;
-  modalOverlay.classList.add('open');
-  formError.classList.add('hidden');
-}
-function cerrarModal() {
-  modalOverlay.classList.remove('open');
-  formProducto.reset();
-  document.getElementById('productoId').value = '';
-  modoEdicion = false;
-}
-document.getElementById('btnNuevoProducto').addEventListener('click', () => abrirModal());
-document.getElementById('modalClose').addEventListener('click', cerrarModal);
-document.getElementById('btnCancelar').addEventListener('click', cerrarModal);
-modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) cerrarModal(); });
-
-// ── Toast ─────────────────────────────────────────────
-function mostrarToast(msg, tipo = 'success') {
-  toast.textContent = msg;
-  toast.className = `toast ${tipo} show`;
-  setTimeout(() => toast.classList.remove('show'), 3000);
+// ── AUTH FUNCTIONS ───────────────────────────────
+function mostrarLogin() {
+  document.getElementById('loginForm').classList.remove('hidden');
+  document.getElementById('registroForm').classList.add('hidden');
+  document.getElementById('modalTitle').textContent = 'Iniciar Sesión';
 }
 
-// ── Helpers ───────────────────────────────────────────
-const fmt = n => `S/ ${Number(n).toFixed(2)}`;
-const stockClass = s => s === 0 ? 'stock-zero' : s <= 5 ? 'stock-warn' : 'stock-ok';
-
-function tablaVacia(msg = 'No hay productos') {
-  return `<div class="empty-state"><div class="icon">📦</div><p>${msg}</p></div>`;
+function mostrarRegistro() {
+  document.getElementById('loginForm').classList.add('hidden');
+  document.getElementById('registroForm').classList.remove('hidden');
+  document.getElementById('modalTitle').textContent = 'Registrarse';
 }
 
-function renderTabla(productos, acciones = true) {
-  if (!productos.length) return tablaVacia();
-  return `
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th><th>Categoría</th><th>Precio</th>
-          <th>Stock</th><th>Unidad</th>
-          ${acciones ? '<th>Acciones</th>' : ''}
-        </tr>
-      </thead>
-      <tbody>
-        ${productos.map(p => `
-          <tr>
-            <td><strong>${p.nombre}</strong>${p.descripcion ? `<br><small style="color:var(--text2)">${p.descripcion.substring(0,60)}${p.descripcion.length>60?'…':''}</small>` : ''}</td>
-            <td><span class="badge-cat">${p.categoria}</span></td>
-            <td>${fmt(p.precio)}</td>
-            <td class="${stockClass(p.stock)}">${p.stock}</td>
-            <td style="color:var(--text2);font-size:.82rem">${p.unidad}</td>
-            ${acciones ? `
-            <td>
-              <button class="btn-edit" title="Editar" onclick="editarProducto('${p._id}')">✏️</button>
-              <button class="btn-del" title="Eliminar" onclick="eliminarProducto('${p._id}','${p.nombre}')">🗑️</button>
-            </td>` : ''}
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>`;
+function abrirLogin() {
+  document.getElementById('loginModal').classList.add('open');
+  mostrarLogin();
 }
 
-// ── Dashboard ─────────────────────────────────────────
-async function cargarDashboard() {
-  try {
-    const [statsRes, productosRes] = await Promise.all([
-      fetch(`${API}/stats/resumen`),
-      fetch(`${API}?orden=stock`)
-    ]);
-    const { stats } = await statsRes.json();
-    const { productos } = await productosRes.json();
-
-    document.getElementById('stat-total').textContent = stats.totalProductos;
-    document.getElementById('stat-valor').textContent = fmt(stats.valorInventario);
-    document.getElementById('stat-bajo').textContent  = stats.stockBajo;
-    document.getElementById('stat-sin').textContent   = stats.sinStock;
-
-    const criticos = productos.filter(p => p.stock <= 5);
-    document.getElementById('tabla-criticos').innerHTML =
-      criticos.length ? renderTabla(criticos, false) : tablaVacia('No hay productos con stock crítico 🎉');
-  } catch {
-    mostrarToast('Error al cargar el dashboard', 'error');
-  }
+function cerrarModal(id) {
+  document.getElementById(id).classList.remove('open');
 }
-async function enviar() {
-  const input = document.getElementById("msg");
-  const mensaje = input.value;
 
-  if (!mensaje) return;
-
-  const chat = document.getElementById("chat");
-
-  // mensaje usuario
-  chat.innerHTML += `<p><b>Tú:</b> ${mensaje}</p>`;
-
-  input.value = "";
+async function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPass').value;
+  const errorDiv = document.getElementById('formError');
 
   try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ mensaje })
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
-
     const data = await res.json();
-
-    // respuesta IA
-    chat.innerHTML += `<p><b>IA:</b> ${data.respuesta || data.mensaje || JSON.stringify(data)}</p>`;
-    chat.scrollTop = chat.scrollHeight;
-
-  } catch (error) {
-    chat.innerHTML += `<p style="color:red;">Error: ${error.message}</p>`;
+    if (data.ok) {
+      token = data.token;
+      usuario = data.usuario;
+      localStorage.setItem('token', token);
+      localStorage.setItem('usuario', JSON.stringify(usuario));
+      actualizarUI();
+      cerrarModal('loginModal');
+      mostrarToast('Bienvenido ' + usuario.nombre);
+      if (usuario.rol === 'admin') mostrarAdminPanel();
+    } else {
+      errorDiv.textContent = data.mensaje;
+      errorDiv.classList.remove('hidden');
+    }
+  } catch {
+    mostrarToast('Error de conexión', 'error');
   }
 }
 
-// ── Productos ─────────────────────────────────────────
-async function cargarProductos() {
-  const buscar   = document.getElementById('buscarInput').value;
-  const categoria = document.getElementById('categoriaFiltro').value;
-  const orden    = document.getElementById('ordenFiltro').value;
+async function registro() {
+  const nombre = document.getElementById('regNombre').value;
+  const email = document.getElementById('regEmail').value;
+  const password = document.getElementById('regPass').value;
+  const errorDiv = document.getElementById('formError');
 
-  const params = new URLSearchParams();
-  if (buscar)    params.append('buscar', buscar);
-  if (categoria) params.append('categoria', categoria);
-  if (orden)     params.append('orden', orden);
+  if (password.length < 6) {
+    errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
 
   try {
-    const res = await fetch(`${API}?${params}`);
+    const res = await fetch(`${API}/auth/registro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, email, password })
+    });
     const data = await res.json();
-    document.getElementById('tabla-productos').innerHTML = renderTabla(data.productos || []);
-    actualizarCategorias(data.productos || []);
+    if (data.ok) {
+      token = data.token;
+      usuario = data.usuario;
+      localStorage.setItem('token', token);
+      localStorage.setItem('usuario', JSON.stringify(usuario));
+      actualizarUI();
+      cerrarModal('loginModal');
+      mostrarToast('Cuenta creada exitosamente');
+    } else {
+      errorDiv.textContent = data.mensaje;
+      errorDiv.classList.remove('hidden');
+    }
+  } catch {
+    mostrarToast('Error de conexión', 'error');
+  }
+}
+
+function logout() {
+  token = null;
+  usuario = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('usuario');
+  actualizarUI();
+  document.getElementById('adminPanel').classList.add('hidden');
+  mostrarToast('Sesión cerrada');
+}
+
+function actualizarUI() {
+  const userMenu = document.getElementById('userMenu');
+  if (usuario) {
+    userMenu.innerHTML = `
+      <span style="color:white; margin-right:1rem;">Hola, ${usuario.nombre}</span>
+      ${usuario.rol === 'admin' ? '<button class="btn-login" onclick="mostrarAdminPanel()">Admin</button>' : ''}
+      <button class="btn-login" onclick="logout()">Salir</button>
+    `;
+  } else {
+    userMenu.innerHTML = '<button class="btn-login" onclick="abrirLogin()">Iniciar Sesión</button>';
+  }
+  actualizarCartCount();
+}
+
+// ── PRODUCTOS ────────────────────────────────────
+async function cargarProductos() {
+  const categoria = document.body.dataset.categoria || '';
+  const orden = document.getElementById('ordenFiltro')?.value || '';
+  
+  let url = `${API}/productos?activo=true`;
+  if (categoria) url += `&categoria=${categoria}`;
+  if (orden === 'precio-asc') url += '&orden=precio';
+  if (orden === 'precio-desc') url += '&orden=-precio';
+  if (orden === 'descuento') url += '&orden=descuento';
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    renderizarProductos(data.productos || [], 'productosGrid');
   } catch {
     mostrarToast('Error al cargar productos', 'error');
   }
 }
 
-function actualizarCategorias(productos) {
-  const sel = document.getElementById('categoriaFiltro');
-  const actual = sel.value;
-  const cats = [...new Set(productos.map(p => p.categoria))].sort();
-  sel.innerHTML = '<option value="">Todas las categorías</option>' +
-    cats.map(c => `<option value="${c}" ${c === actual ? 'selected' : ''}>${c}</option>`).join('');
+async function cargarFlashDeals() {
+  try {
+    const res = await fetch(`${API}/productos?activo=true`);
+    const data = await res.json();
+    const ofertas = (data.productos || [])
+      .filter(p => p.descuento > 0)
+      .sort((a, b) => b.descuento - a.descuento)
+      .slice(0, 8);
+    renderizarProductos(ofertas, 'flashProducts');
+  } catch {
+    console.error('Error cargando ofertas');
+  }
 }
 
-document.getElementById('btnBuscar').addEventListener('click', cargarProductos);
-document.getElementById('buscarInput').addEventListener('keypress', e => { if (e.key === 'Enter') cargarProductos(); });
+function renderizarProductos(productos, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
 
-// ── CRUD ──────────────────────────────────────────────
-formProducto.addEventListener('submit', async e => {
-  e.preventDefault();
-  formError.classList.add('hidden');
-
-  const id = document.getElementById('productoId').value;
-  const body = {
-    nombre:      document.getElementById('nombre').value.trim(),
-    categoria:   document.getElementById('categoria').value.trim(),
-    descripcion: document.getElementById('descripcion').value.trim(),
-    precio:      parseFloat(document.getElementById('precio').value),
-    stock:       parseInt(document.getElementById('stock').value),
-    unidad:      document.getElementById('unidad').value.trim() || 'unidad',
-  };
-
-  const url    = id ? `${API}/${id}` : API;
-  const method = id ? 'PUT' : 'POST';
-
-  try {
-    const res  = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
-    if (!data.ok) {
-      formError.textContent = data.errores ? data.errores.join(' | ') : data.mensaje;
-      formError.classList.remove('hidden');
-      return;
-    }
-    cerrarModal();
-    mostrarToast(id ? 'Producto actualizado ✓' : 'Producto creado ✓');
-    cargarProductos();
-    cargarDashboard();
-  } catch {
-    mostrarToast('Error de conexión con el servidor', 'error');
+  if (!productos.length) {
+    container.innerHTML = '<p style="text-align:center;grid-column:1/-1;padding:3rem;color:#666;">No hay productos disponibles</p>';
+    return;
   }
-});
 
-window.editarProducto = async function(id) {
-  try {
-    const res  = await fetch(`${API}/${id}`);
-    const data = await res.json();
-    const p = data.producto;
-    modoEdicion = true;
-    abrirModal('Editar Producto');
-    document.getElementById('productoId').value   = p._id;
-    document.getElementById('nombre').value        = p.nombre;
-    document.getElementById('categoria').value     = p.categoria;
-    document.getElementById('descripcion').value   = p.descripcion || '';
-    document.getElementById('precio').value        = p.precio;
-    document.getElementById('stock').value         = p.stock;
-    document.getElementById('unidad').value        = p.unidad;
-  } catch {
-    mostrarToast('No se pudo cargar el producto', 'error');
+  container.innerHTML = productos.map(p => `
+    <div class="product-card" onclick="verProducto('${p._id}')">
+      ${p.descuento ? `<div class="product-badge">-${p.descuento}%</div>` : ''}
+      ${p.destacado ? `<div class="product-badge" style="background:#ffc107;left:auto;right:10px;">★ Destacado</div>` : ''}
+      <img src="${p.imagen || 'https://via.placeholder.com/300'}" alt="${p.nombre}" class="product-img"/>
+      <div class="product-info">
+        <div class="product-name">${p.nombre}</div>
+        <div class="product-price">
+          <span class="price-current">S/ ${Number(p.precio).toFixed(2)}</span>
+          ${p.precioOriginal ? `<span class="price-original">S/ ${Number(p.precioOriginal).toFixed(2)}</span>` : ''}
+        </div>
+        <div class="product-stock">${p.stock > 0 ? `Stock: ${p.stock}` : 'Agotado'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filtrarCategoria(cat, btn, orden) {
+  document.body.dataset.categoria = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (orden) document.getElementById('ordenFiltro').value = orden;
+  cargarProductos();
+}
+
+function buscarProductos() {
+  const buscar = document.getElementById('buscarInput').value;
+  if (buscar) {
+    fetch(`${API}/productos?buscar=${buscar}`)
+      .then(r => r.json())
+      .then(data => renderizarProductos(data.productos || [], 'productosGrid'));
   }
-};
+}
 
-window.eliminarProducto = async function(id, nombre) {
-  if (!confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+function scrollToProducts() {
+  document.getElementById('productosSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── PRODUCTO DETALLE ─────────────────────────────
+async function verProducto(id) {
   try {
-    const res  = await fetch(`${API}/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API}/productos/${id}`);
+    const data = await res.json();
+    if (!data.ok) return mostrarToast('Producto no encontrado', 'error');
+    
+    productoSeleccionado = data.producto;
+    cantidadSeleccionada = 1;
+    
+    const modal = document.getElementById('productoModal');
+    const body = document.getElementById('productoModalBody');
+    
+    body.innerHTML = `
+      <div class="producto-detalle">
+        <div class="producto-imagen">
+          <img src="${productoSeleccionado.imagen}" alt="${productoSeleccionado.nombre}" style="width:100%;border-radius:8px;"/>
+        </div>
+        <div class="producto-info">
+          <h2>${productoSeleccionado.nombre}</h2>
+          <p class="producto-descripcion">${productoSeleccionado.descripcion || 'Sin descripción'}</p>
+          <div class="producto-precio">
+            <span class="precio-final">S/ ${Number(productoSeleccionado.precio).toFixed(2)}</span>
+            ${productoSeleccionado.descuento ? `
+              <span class="precio-original">S/ ${Number(productoSeleccionado.precioOriginal).toFixed(2)}</span>
+              <span class="descuento-badge">-${productoSeleccionado.descuento}%</span>
+            ` : ''}
+          </div>
+          <div class="stock-info">
+            <strong>Categoría:</strong> ${productoSeleccionado.categoria}<br/>
+            <strong>Stock disponible:</strong> ${productoSeleccionado.stock} unidades
+          </div>
+          <div class="qty-selector">
+            <span>Cantidad:</span>
+            <button class="qty-btn" onclick="cambiarCantidadDetalle(-1)">-</button>
+            <span class="qty-display" id="cantidadDisplay">${cantidadSeleccionada}</span>
+            <button class="qty-btn" onclick="cambiarCantidadDetalle(1)">+</button>
+          </div>
+          <button class="btn-add-cart-lg" onclick="agregarAlCarritoDesdeDetalle()" 
+                  ${productoSeleccionado.stock === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+            ${productoSeleccionado.stock > 0 ? '🛒 Agregar al Carrito' : 'Agotado'}
+          </button>
+        </div>
+      </div>
+    `;
+    
+    modal.classList.add('open');
+  } catch {
+    mostrarToast('Error al cargar producto', 'error');
+  }
+}
+
+function cambiarCantidadDetalle(delta) {
+  cantidadSeleccionada += delta;
+  if (cantidadSeleccionada < 1) cantidadSeleccionada = 1;
+  if (cantidadSeleccionada > productoSeleccionado.stock) cantidadSeleccionada = productoSeleccionado.stock;
+  document.getElementById('cantidadDisplay').textContent = cantidadSeleccionada;
+}
+
+function agregarAlCarritoDesdeDetalle() {
+  if (!usuario) {
+    cerrarModal('productoModal');
+    abrirLogin();
+    return;
+  }
+  
+  const item = carrito.find(i => i._id === productoSeleccionado._id);
+  if (item) {
+    const nuevaCantidad = item.cantidad + cantidadSeleccionada;
+    item.cantidad = Math.min(nuevaCantidad, productoSeleccionado.stock);
+  } else {
+    carrito.push({ ...productoSeleccionado, cantidad: cantidadSeleccionada });
+  }
+  
+  guardarCarrito();
+  cerrarModal('productoModal');
+  mostrarToast('Producto agregado al carrito');
+}
+
+// ── CARRITO ──────────────────────────────────────
+function agregarAlCarrito(id) {
+  if (!usuario) {
+    abrirLogin();
+    return;
+  }
+
+  fetch(`${API}/productos/${id}`)
+    .then(r => r.json())
+    .then(data => {
+      const p = data.producto;
+      const item = carrito.find(i => i._id === id);
+      if (item) {
+        if (item.cantidad < p.stock) item.cantidad++;
+      } else {
+        carrito.push({ ...p, cantidad: 1 });
+      }
+      guardarCarrito();
+      mostrarToast('Producto agregado al carrito');
+    });
+}
+
+function guardarCarrito() {
+  localStorage.setItem('carrito', JSON.stringify(carrito));
+  actualizarCartCount();
+}
+
+function actualizarCartCount() {
+  const count = carrito.reduce((sum, i) => sum + i.cantidad, 0);
+  document.getElementById('cartCount').textContent = count;
+}
+
+function toggleCart() {
+  const sidebar = document.getElementById('cartSidebar');
+  const overlay = document.getElementById('cartOverlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+  renderizarCarrito();
+}
+
+function renderizarCarrito() {
+  const container = document.getElementById('cartItems');
+  const footer = document.getElementById('cartFooter');
+
+  if (!carrito.length) {
+    container.innerHTML = '<p style="text-align:center;padding:3rem;color:#666;">Tu carrito está vacío</p>';
+    footer.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = carrito.map((item, i) => `
+    <div class="cart-item">
+      <img src="${item.imagen || 'https://via.placeholder.com/80'}" alt="${item.nombre}"/>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.nombre}</div>
+        <div class="cart-item-price">S/ ${Number(item.precio).toFixed(2)}</div>
+        <div class="cart-item-actions">
+          <button class="qty-btn" onclick="cambiarCantidad(${i}, -1)">-</button>
+          <span>${item.cantidad}</span>
+          <button class="qty-btn" onclick="cambiarCantidad(${i}, 1)">+</button>
+          <button class="qty-btn" style="margin-left:auto;color:red;" onclick="eliminarDelCarrito(${i})">🗑</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
+  footer.innerHTML = `
+    <div class="cart-total">
+      <span>Total: </span>
+      <span>S/ ${total.toFixed(2)}</span>
+    </div>
+    <button class="btn-checkout" onclick="checkout()">Proceder al Pago</button>
+  `;
+}
+
+function cambiarCantidad(index, delta) {
+  carrito[index].cantidad += delta;
+  if (carrito[index].cantidad <= 0) carrito.splice(index, 1);
+  guardarCarrito();
+  renderizarCarrito();
+}
+
+function eliminarDelCarrito(index) {
+  carrito.splice(index, 1);
+  guardarCarrito();
+  renderizarCarrito();
+}
+
+function checkout() {
+  if (!carrito.length) return;  
+  const content = document.getElementById('checkoutContent');
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  
+  content.innerHTML = `
+    <div class="checkout-summary">
+      ${carrito.map(item => `
+        <div class="checkout-item">
+          <img src="${item.imagen}" alt="${item.nombre}"/>
+          <div style="flex:1;">
+            <strong>${item.nombre}</strong><br/>
+            <span style="color:#666;">Cantidad: ${item.cantidad}</span>
+          </div>
+          <div style="font-weight:700;">S/ ${(item.precio * item.cantidad).toFixed(2)}</div>
+        </div>
+      `).join('')}
+      <div class="checkout-total">
+        <span>Total a pagar:</span>
+        <span>S/ ${total.toFixed(2)}</span>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Nombre completo:</label>
+      <input type="text" id="checkoutNombre" value="${usuario?.nombre || ''}" class="input-field"/>
+    </div>
+    <div class="form-group">
+      <label>Dirección de envío:</label>
+      <textarea id="checkoutDireccion" rows="3" class="input-field" placeholder="Ingresa tu dirección completa..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Método de pago:</label>
+      <select id="checkoutPago" class="input-field">
+        <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+        <option value="yape">Yape</option>
+        <option value="plin">Plin</option>
+        <option value="contraentrega">Pago contra entrega</option>
+      </select>
+    </div>
+    
+    <button class="btn-primary full" style="margin-top:1rem;" onclick="procesarCompra()">
+      Confirmar Compra - S/ ${total.toFixed(2)}
+    </button>
+  `;  
+  document.getElementById('checkoutModal').classList.add('open');
+}
+
+async function procesarCompra() {
+  const nombre = document.getElementById('checkoutNombre').value;
+  const direccion = document.getElementById('checkoutDireccion').value;
+  const pago = document.getElementById('checkoutPago').value;
+  
+  if (!nombre || !direccion) {
+    mostrarToast('Completa todos los campos', 'error');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API}/ordenes`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        productos: carrito.map(i => ({
+          producto: i._id,
+          cantidad: i.cantidad,
+          precio: i.precio
+        })),
+        total: carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0),
+        direccionEnvio: direccion,
+        metodoPago: pago
+      })
+    });
+    
     const data = await res.json();
     if (data.ok) {
-      mostrarToast('Producto eliminado');
-      cargarProductos();
-      cargarDashboard();
+      carrito = [];
+      guardarCarrito();
+      cerrarModal('checkoutModal');
+      cerrarModal('cartSidebar');
+      mostrarToast('¡Compra realizada con éxito!');
+    } else {
+      mostrarToast(data.mensaje || 'Error al procesar compra', 'error');
     }
   } catch {
-    mostrarToast('Error al eliminar producto', 'error');
+    mostrarToast('Error de conexión', 'error');
   }
-};
+}
 
-// ── Init ──────────────────────────────────────────────
-cargarDashboard();
+// ── ADMIN PANEL ──────────────────────────────────
+function mostrarAdminPanel() {
+  document.getElementById('adminPanel').classList.remove('hidden');
+  document.getElementById('heroSection').style.display = 'none';
+  document.getElementById('flashDeals').style.display = 'none';
+  document.getElementById('productosSection').style.display = 'none';
+  showTab('productos', document.querySelector('.tab-btn'));
+  cargarUsuariosAdmin();
+}
+
+function showTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tabProductos').classList.add('hidden');
+  document.getElementById('tabUsuarios').classList.add('hidden');
+  document.getElementById('tabNuevo').classList.add('hidden');
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+  
+  if (tab === 'productos') cargarProductosAdmin();
+  if (tab === 'usuarios') cargarUsuariosAdmin();
+}
+
+async function cargarProductosAdmin() {
+  const res = await fetch(`${API}/productos`);
+  const data = await res.json();
+  const container = document.getElementById('tabProductos');
+  container.innerHTML = `
+    <table class="admin-table">
+      <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${(data.productos || []).map(p => `
+          <tr>
+            <td>${p.nombre}</td>
+            <td>${p.categoria}</td>
+            <td>S/ ${Number(p.precio).toFixed(2)}</td>
+            <td>${p.stock}</td>
+            <td>
+              <button class="btn-edit" onclick="editarProducto('${p._id}')">Editar</button>
+              <button class="btn-del" onclick="eliminarProducto('${p._id}')">Eliminar</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function cargarUsuariosAdmin() {
+  try {
+    const res = await fetch(`${API}/usuarios`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const container = document.getElementById('tabUsuarios');
+    container.innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead>
+        <tbody>
+          ${(data.usuarios || []).map(u => `
+            <tr>
+              <td>${u.nombre}</td>
+              <td>${u.email}</td>
+              <td>
+                <select onchange="cambiarRol('${u._id}', this.value)" 
+                        style="padding:0.3rem;border:1px solid #ddd;border-radius:4px;">
+                  <option value="usuario" ${u.rol === 'usuario' ? 'selected' : ''}>Usuario</option>
+                  <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+              </td>
+              <td>
+                <button class="btn-del" onclick="eliminarUsuario('${u._id}')">Eliminar</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch {
+    mostrarToast('Error cargando usuarios', 'error');
+  }
+}
+
+async function cambiarRol(id, rol) {
+  try {
+    await fetch(`${API}/usuarios/${id}/rol`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rol })
+    });
+    mostrarToast('Rol actualizado');
+  } catch {
+    mostrarToast('Error al actualizar rol', 'error');
+  }
+}
+
+async function eliminarUsuario(id) {
+  if (!confirm('¿Eliminar usuario?')) return;
+  try {
+    await fetch(`${API}/usuarios/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    mostrarToast('Usuario eliminado');
+    cargarUsuariosAdmin();
+  } catch {
+    mostrarToast('Error al eliminar', 'error');
+  }
+}
+
+// ── TOAST ────────────────────────────────────────
+function mostrarToast(msg, tipo = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = `toast ${tipo} show`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── EVENT LISTENERS ──────────────────────────────
+document.getElementById('loginPass')?.addEventListener('keypress', e => {
+  if (e.key === 'Enter') login();
+});
+
+document.getElementById('buscarInput')?.addEventListener('keypress', e => {
+  if (e.key === 'Enter') buscarProductos();
+});
+
+// Form submit para nuevo producto (con imagen)
+document.getElementById('formProducto')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('productoId').value;
+  const formData = new FormData();
+  
+  formData.append('nombre', document.getElementById('nombre').value);
+  formData.append('categoria', document.getElementById('categoria').value);
+  formData.append('descripcion', document.getElementById('descripcion').value);
+  formData.append('precio', parseFloat(document.getElementById('precio').value));
+  formData.append('descuento', parseInt(document.getElementById('descuento').value) || 0);
+  formData.append('stock', parseInt(document.getElementById('stock').value));
+  
+  const imagenFile = document.getElementById('imagenFile').files[0];
+  const imagenUrl = document.getElementById('imagenUrl').value;
+  
+  if (imagenFile) {
+    formData.append('imagen', imagenFile);
+  } else if (imagenUrl) {
+    formData.append('imagen', imagenUrl);
+  }
+  
+  try {
+    const url = id ? `${API}/productos/${id}` : `${API}/productos`;
+    const method = id ? 'PUT' : 'POST';
+    
+    await fetch(url, {
+      method,
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    
+    mostrarToast(id ? 'Producto actualizado' : 'Producto creado');
+    document.getElementById('formProducto').reset();
+    cargarProductosAdmin();
+    cargarProductos();
+  } catch {
+    mostrarToast('Error al guardar', 'error');
+  }
+});
