@@ -41,7 +41,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/productos - Crear producto (admin)
 router.post('/', upload.single('imagen'), async (req, res) => {
   try {
-    const imagen = req.file ? `/uploads/${req.file.filename}` : (req.body.imagen || 'https://via.placeholder.com/300');
+    const imagen = req.file ? `/uploads/${req.file.filename}` : (req.body.imagen || req.body.imagenUrl || 'https://via.placeholder.com/300');
     const producto = new Producto({
       nombre: req.body.nombre,
       descripcion: req.body.descripcion,

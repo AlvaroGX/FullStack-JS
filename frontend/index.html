@@ -31,7 +31,7 @@
     <nav class="nav-categories" id="navCategorias">
       <div class="container">
         <button class="cat-btn active" onclick="filtrarCategoria('', this)">Todo</button>
-        <button class="cat-btn" onclick="filtrarCategoria('Electrónica', this)">Electrónica</button>
+        <button class="cat-btn" onclick="filtrarCategoria('Electronica', this)">Electronica</button>
         <button class="cat-btn" onclick="filtrarCategoria('Hogar', this)">Hogar</button>
         <button class="cat-btn" onclick="filtrarCategoria('Moda', this)">Moda</button>
         <button class="cat-btn" onclick="filtrarCategoria('Deportes', this)">Deportes</button>
@@ -160,7 +160,14 @@
         <form id="formProducto" class="admin-form" enctype="multipart/form-data">
           <input type="hidden" id="productoId"/>
           <input type="text" id="nombre" placeholder="Nombre" required class="input-field"/>
-          <input type="text" id="categoria" placeholder="Categoría" required class="input-field"/>
+          <select id="categoria" required class="input-field">
+            <option value="">Seleccionar categoría...</option>
+            <option value="Electrónica">Electrónica</option>
+            <option value="Hogar">Hogar</option>
+            <option value="Moda">Moda</option>
+            <option value="Deportes">Deportes</option>
+            <option value="Juguetes">Juguetes</option>
+          </select>
           <textarea id="descripcion" placeholder="Descripción" class="input-field" rows="3"></textarea>
           <div class="form-row">
             <input type="number" id="precio" placeholder="Precio" step="0.01" required class="input-field"/>

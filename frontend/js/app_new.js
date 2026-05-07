@@ -1,4 +1,4 @@
-/* TEMU Clone - Main App Logic */
+﻿/* ── TEMU Clone - Main App Logic ───────────────── */
 const API = '/api';
 let carrito = [];
 let usuario = null;
@@ -23,20 +23,31 @@ try {
 
 token = localStorage.getItem('token');
 
-// INIT
+// ── INIT ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Iniciando aplicacion...');
+  console.log('🚀 Iniciando aplicación...');
   cargarProductos();
   cargarFlashDeals();
   actualizarUI();
   if (usuario && usuario.rol === 'admin') mostrarAdminPanel();
 });
 
-// AUTH FUNCTIONS
+// Backup: si el DOM ya está listo
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  console.log('🚀 DOM ya estaba listo, iniciando...');
+  setTimeout(() => {
+    cargarProductos();
+    cargarFlashDeals();
+    actualizarUI();
+    if (usuario && usuario.rol === 'admin') mostrarAdminPanel();
+  }, 100);
+}
+
+// ── AUTH FUNCTIONS ───────────────────────────────
 function mostrarLogin() {
   document.getElementById('loginForm').classList.remove('hidden');
   document.getElementById('registroForm').classList.add('hidden');
-  document.getElementById('modalTitle').textContent = 'Iniciar Sesion';
+  document.getElementById('modalTitle').textContent = 'Iniciar Sesión';
 }
 
 function mostrarRegistro() {
@@ -59,7 +70,7 @@ async function login() {
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPass').value;
   const errorDiv = document.getElementById('formError');
-  
+
   try {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
@@ -81,7 +92,7 @@ async function login() {
       errorDiv.classList.remove('hidden');
     }
   } catch {
-    mostrarToast('Error de conexion', 'error');
+    mostrarToast('Error de conexión', 'error');
   }
 }
 
@@ -90,13 +101,13 @@ async function registro() {
   const email = document.getElementById('regEmail').value;
   const password = document.getElementById('regPass').value;
   const errorDiv = document.getElementById('formError');
-    
+
   if (password.length < 6) {
-    errorDiv.textContent = 'La contrasena debe tener al menos 6 caracteres';
+    errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
     errorDiv.classList.remove('hidden');
     return;
   }
-    
+
   try {
     const res = await fetch(`${API}/auth/registro`, {
       method: 'POST',
@@ -117,7 +128,7 @@ async function registro() {
       errorDiv.classList.remove('hidden');
     }
   } catch {
-    mostrarToast('Error de conexion', 'error');
+    mostrarToast('Error de conexión', 'error');
   }
 }
 
@@ -128,7 +139,7 @@ function logout() {
   localStorage.removeItem('usuario');
   actualizarUI();
   document.getElementById('adminPanel').classList.add('hidden');
-  mostrarToast('Sesion cerrada');
+  mostrarToast('Sesión cerrada');
 }
 
 function actualizarUI() {
@@ -140,22 +151,22 @@ function actualizarUI() {
       <button class="btn-login" onclick="logout()">Salir</button>
     `;
   } else {
-    userMenu.innerHTML = '<button class="btn-login" onclick="abrirLogin()">Iniciar Sesion</button>';
+    userMenu.innerHTML = '<button class="btn-login" onclick="abrirLogin()">Iniciar Sesión</button>';
   }
   actualizarCartCount();
 }
 
-// PRODUCTOS
+// ── PRODUCTOS ────────────────────────────────────
 async function cargarProductos() {
   const categoria = document.body.dataset.categoria || '';
   const orden = document.getElementById('ordenFiltro')?.value || '';
-    
+  
   let url = `${API}/productos?activo=true`;
   if (categoria) url += `&categoria=${encodeURIComponent(categoria)}`;
   if (orden === 'precio-asc') url += '&orden=precio';
   if (orden === 'precio-desc') url += '&orden=-precio';
   if (orden === 'descuento') url += '&orden=descuento';
-    
+  
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -184,16 +195,16 @@ async function cargarFlashDeals() {
 function renderizarProductos(productos, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-    
+
   if (!productos.length) {
     container.innerHTML = '<p style="text-align:center;grid-column:1/-1;padding:3rem;color:#666;">No hay productos disponibles</p>';
     return;
   }
-    
+
   container.innerHTML = productos.map(p => `
     <div class="product-card" onclick="verProducto('${p._id}')">
       ${p.descuento ? `<div class="product-badge">-${p.descuento}%</div>` : ''}
-      ${p.destacado ? `<div class="product-badge" style="background:#ffc107;left:auto;right:10px;"> Destacado</div>` : ''}
+      ${p.destacado ? `<div class="product-badge" style="background:#ffc107;left:auto;right:10px;">★ Destacado</div>` : ''}
       <img src="${p.imagen || 'https://via.placeholder.com/300'}" alt="${p.nombre}" class="product-img"/>
       <div class="product-info">
         <div class="product-name">${p.nombre}</div>
@@ -208,7 +219,13 @@ function renderizarProductos(productos, containerId) {
 }
 
 function filtrarCategoria(cat, btn, orden) {
-  console.log('Filtrando por categoria:', cat);
+  console.log('Filtrando por categoría:', cat);
+  document.body.dataset.categoria = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (orden) document.getElementById('ordenFiltro').value = orden;
+  cargarProductos();
+}
   document.body.dataset.categoria = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
@@ -229,19 +246,19 @@ function scrollToProducts() {
   document.getElementById('productosSection').scrollIntoView({ behavior: 'smooth' });
 }
 
-// PRODUCTO DETALLE
+// ── PRODUCTO DETALLE ─────────────────────────────
 async function verProducto(id) {
   try {
     const res = await fetch(`${API}/productos/${id}`);
     const data = await res.json();
     if (!data.ok) return mostrarToast('Producto no encontrado', 'error');
-        
+    
     productoSeleccionado = data.producto;
     cantidadSeleccionada = 1;
-        
+    
     const modal = document.getElementById('productoModal');
     const body = document.getElementById('productoModalBody');
-        
+    
     body.innerHTML = `
       <div class="producto-detalle">
         <div class="producto-imagen">
@@ -249,7 +266,7 @@ async function verProducto(id) {
         </div>
         <div class="producto-info">
           <h2>${productoSeleccionado.nombre}</h2>
-          <p class="producto-descripcion">${productoSeleccionado.descripcion || 'Sin descripcion'}</p>
+          <p class="producto-descripcion">${productoSeleccionado.descripcion || 'Sin descripción'}</p>
           <div class="producto-precio">
             <span class="precio-final">S/ ${Number(productoSeleccionado.precio).toFixed(2)}</span>
             ${productoSeleccionado.descuento ? `
@@ -258,7 +275,7 @@ async function verProducto(id) {
             ` : ''}
           </div>
           <div class="stock-info">
-            <strong>Categoria:</strong> ${productoSeleccionado.categoria}<br/>
+            <strong>Categoría:</strong> ${productoSeleccionado.categoria}<br/>
             <strong>Stock disponible:</strong> ${productoSeleccionado.stock} unidades
           </div>
           <div class="qty-selector">
@@ -269,12 +286,12 @@ async function verProducto(id) {
           </div>
           <button class="btn-add-cart-lg" onclick="agregarAlCarritoDesdeDetalle()" 
                   ${productoSeleccionado.stock === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
-            ${productoSeleccionado.stock > 0 ? ' Agregar al Carrito' : 'Agotado'}
+            ${productoSeleccionado.stock > 0 ? '🛒 Agregar al Carrito' : 'Agotado'}
           </button>
         </div>
       </div>
     `;
-        
+    
     modal.classList.add('open');
   } catch {
     mostrarToast('Error al cargar producto', 'error');
@@ -294,7 +311,7 @@ function agregarAlCarritoDesdeDetalle() {
     abrirLogin();
     return;
   }
-    
+  
   const item = carrito.find(i => i._id === productoSeleccionado._id);
   if (item) {
     const nuevaCantidad = item.cantidad + cantidadSeleccionada;
@@ -302,19 +319,19 @@ function agregarAlCarritoDesdeDetalle() {
   } else {
     carrito.push({ ...productoSeleccionado, cantidad: cantidadSeleccionada });
   }
-    
+  
   guardarCarrito();
   cerrarModal('productoModal');
   mostrarToast('Producto agregado al carrito');
 }
 
-// CARRITO
+// ── CARRITO ──────────────────────────────────────
 function agregarAlCarrito(id) {
   if (!usuario) {
     abrirLogin();
     return;
   }
-    
+
   fetch(`${API}/productos/${id}`)
     .then(r => r.json())
     .then(data => {
@@ -351,13 +368,13 @@ function toggleCart() {
 function renderizarCarrito() {
   const container = document.getElementById('cartItems');
   const footer = document.getElementById('cartFooter');
-    
+
   if (!carrito.length) {
-    container.innerHTML = '<p style="text-align:center;padding:3rem;color:#666;">Tu carrito esta vacio</p>';
+    container.innerHTML = '<p style="text-align:center;padding:3rem;color:#666;">Tu carrito está vacío</p>';
     footer.innerHTML = '';
     return;
   }
-    
+
   container.innerHTML = carrito.map((item, i) => `
     <div class="cart-item">
       <img src="${item.imagen || 'https://via.placeholder.com/80'}" alt="${item.nombre}"/>
@@ -368,13 +385,13 @@ function renderizarCarrito() {
           <button class="qty-btn" onclick="cambiarCantidad(${i}, -1)">-</button>
           <span>${item.cantidad}</span>
           <button class="qty-btn" onclick="cambiarCantidad(${i}, 1)">+</button>
-          <button class="qty-btn" style="margin-left:auto;color:red;" onclick="eliminarDelCarrito(${i})">x</button>
+          <button class="qty-btn" style="margin-left:auto;color:red;" onclick="eliminarDelCarrito(${i})">🗑</button>
         </div>
       </div>
     </div>
   `).join('');
-    
-  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+  const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
   footer.innerHTML = `
     <div class="cart-total">
       <span>Total: </span>
@@ -398,10 +415,10 @@ function eliminarDelCarrito(index) {
 }
 
 function checkout() {
-  if (!carrito.length) return;    
+  if (!carrito.length) return;  
   const content = document.getElementById('checkoutContent');
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    
+  
   content.innerHTML = `
     <div class="checkout-summary">
       ${carrito.map(item => `
@@ -419,38 +436,38 @@ function checkout() {
         <span>S/ ${total.toFixed(2)}</span>
       </div>
     </div>
-      
+    
     <div class="form-group">
       <label>Nombre completo:</label>
       <input type="text" id="checkoutNombre" value="${usuario?.nombre || ''}" class="input-field"/>
     </div>
     <div class="form-group">
-      <label>Direccion de envio:</label>
-      <textarea id="checkoutDireccion" rows="3" class="input-field" placeholder="Ingresa tu direccion completa..."></textarea>
+      <label>Dirección de envío:</label>
+      <textarea id="checkoutDireccion" rows="3" class="input-field" placeholder="Ingresa tu dirección completa..."></textarea>
     </div>
     <div class="form-group">
-      <label>Metodo de pago:</label>
+      <label>Método de pago:</label>
       <select id="checkoutPago" class="input-field" onchange="mostrarImagenPago()">
-        <option value="tarjeta">Tarjeta de Credito/Debito</option>
+        <option value="tarjeta">Tarjeta de Crédito/Débito</option>
         <option value="yape">Yape</option>
         <option value="plin">Plin</option>
         <option value="contraentrega">Pago contra entrega</option>
       </select>
     </div>
-      
+    
     <div id="pagoContainer" class="pago-container hidden">
       <div class="pago-imagen-container">
-        <img id="pagoImagen" src="" alt="Codigo de pago" class="pago-imagen"/>
+        <img id="pagoImagen" src="" alt="Código de pago" class="pago-imagen"/>
       </div>
       <button class="btn-primary full" style="margin-top:1rem;" onclick="procesarCompra()">
         Confirmar Pago - S/ ${total.toFixed(2)}
       </button>
     </div>
-      
+    
     <button class="btn-primary full" style="margin-top:1rem;" onclick="procesarCompra()" id="btnPagarNormal">
       Confirmar Compra - S/ ${total.toFixed(2)}
     </button>
-  `;    
+  `;  
   document.getElementById('checkoutModal').classList.add('open');
 }
 
@@ -458,17 +475,17 @@ async function mostrarImagenPago() {
   const metodo = document.getElementById('checkoutPago').value;
   const container = document.getElementById('pagoContainer');
   const btnNormal = document.getElementById('btnPagarNormal');
-    
+  
   if (metodo === 'contraentrega') {
     container.classList.add('hidden');
     btnNormal.classList.remove('hidden');
     return;
   }
-    
+  
   try {
     const res = await fetch(`${API}/config/imagen_pago_${metodo}`);
     const data = await res.json();
-        
+    
     if (data.valor) {
       document.getElementById('pagoImagen').src = data.valor;
       container.classList.remove('hidden');
@@ -487,12 +504,12 @@ async function procesarCompra() {
   const nombre = document.getElementById('checkoutNombre').value;
   const direccion = document.getElementById('checkoutDireccion').value;
   const pago = document.getElementById('checkoutPago').value;
-    
+  
   if (!nombre || !direccion) {
     mostrarToast('Completa todos los campos', 'error');
     return;
   }
-    
+  
   try {
     const res = await fetch(`${API}/ordenes`, {
       method: 'POST',
@@ -511,7 +528,7 @@ async function procesarCompra() {
         metodoPago: pago
       })
     });
-        
+    
     const data = await res.json();
     if (data.ok) {
       if (pago === 'contraentrega') {
@@ -519,7 +536,7 @@ async function procesarCompra() {
         guardarCarrito();
         cerrarModal('checkoutModal');
         cerrarModal('cartSidebar');
-        mostrarToast('Compra realizada con exito!');
+        mostrarToast('¡Compra realizada con éxito!');
       } else {
         // Mostrar mensaje de pago en proceso
         const content = document.getElementById('checkoutContent');
@@ -527,7 +544,7 @@ async function procesarCompra() {
           <div class="pago-proceso">
             <div class="pago-icon">⏳</div>
             <h3>Pago en Proceso</h3>
-            <p>Tu pago esta siendo verificado por el administrador.</p>
+            <p>Tu pago está siendo verificado por el administrador.</p>
             <p>Orden #: ${data.orden._id}</p>
             <button class="btn-primary" onclick="cerrarModal('checkoutModal'); toggleCart();">Aceptar</button>
           </div>
@@ -539,11 +556,11 @@ async function procesarCompra() {
       mostrarToast(data.mensaje || 'Error al procesar compra', 'error');
     }
   } catch {
-    mostrarToast('Error de conexion', 'error');
+    mostrarToast('Error de conexión', 'error');
   }
 }
 
-// ADMIN PANEL
+// ── ADMIN PANEL ──────────────────────────────────
 function mostrarAdminPanel() {
   document.getElementById('adminPanel').classList.remove('hidden');
   document.getElementById('heroSection').style.display = 'none';
@@ -562,7 +579,7 @@ function showTab(tab, btn) {
   document.getElementById('tabNuevo').classList.add('hidden');
   document.getElementById('tabConfig').classList.add('hidden');
   document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
-    
+  
   if (tab === 'productos') cargarProductosAdmin();
   if (tab === 'usuarios') cargarUsuariosAdmin();
   if (tab === 'pagos') cargarPagosAdmin();
@@ -575,7 +592,7 @@ async function cargarProductosAdmin() {
   const container = document.getElementById('tabProductos');
   container.innerHTML = `
     <table class="admin-table">
-      <thead><tr><th>Nombre</th><th>Categoria</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
+      <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
       <tbody>
         ${(data.productos || []).map(p => `
           <tr>
@@ -599,7 +616,7 @@ async function editarProducto(id) {
     const res = await fetch(`${API}/productos/${id}`);
     const data = await res.json();
     if (!data.ok) return mostrarToast('Error al cargar producto', 'error');
-        
+    
     const p = data.producto;
     document.getElementById('productoId').value = p._id;
     document.getElementById('nombre').value = p.nombre;
@@ -608,7 +625,7 @@ async function editarProducto(id) {
     document.getElementById('precio').value = p.precio;
     document.getElementById('descuento').value = p.descuento || 0;
     document.getElementById('stock').value = p.stock;
-        
+    
     showTab('nuevo', document.querySelector('.tab-btn[onclick*="nuevo"]'));
     mostrarToast('Editando: ' + p.nombre);
   } catch {
@@ -617,8 +634,8 @@ async function editarProducto(id) {
 }
 
 async function eliminarProducto(id) {
-  if (!confirm('Eliminar este producto?')) return;
-    
+  if (!confirm('¿Eliminar este producto?')) return;
+  
   try {
     await fetch(`${API}/productos/${id}`, {
       method: 'DELETE',
@@ -681,7 +698,7 @@ async function cambiarRol(id, rol) {
 }
 
 async function eliminarUsuario(id) {
-  if (!confirm('Eliminar usuario?')) return;
+  if (!confirm('¿Eliminar usuario?')) return;
   try {
     await fetch(`${API}/usuarios/${id}`, {
       method: 'DELETE',
@@ -694,7 +711,65 @@ async function eliminarUsuario(id) {
   }
 }
 
-// PAGOS ADMIN
+// ── TOAST ────────────────────────────────────────
+function mostrarToast(msg, tipo = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = `toast ${tipo} show`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── EVENT LISTENERS ──────────────────────────────
+document.getElementById('loginPass')?.addEventListener('keypress', e => {
+  if (e.key === 'Enter') login();
+});
+
+document.getElementById('buscarInput')?.addEventListener('keypress', e => {
+  if (e.key === 'Enter') buscarProductos();
+});
+
+// Form submit para nuevo producto (con imagen)
+document.getElementById('formProducto')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('productoId').value;
+  const formData = new FormData();
+  
+  formData.append('nombre', document.getElementById('nombre').value);
+  formData.append('categoria', document.getElementById('categoria').value);
+  formData.append('descripcion', document.getElementById('descripcion').value);
+  formData.append('precio', parseFloat(document.getElementById('precio').value));
+  formData.append('descuento', parseInt(document.getElementById('descuento').value) || 0);
+  formData.append('stock', parseInt(document.getElementById('stock').value));
+  
+  const imagenFile = document.getElementById('imagenFile').files[0];
+  const imagenUrl = document.getElementById('imagenUrl').value;
+  
+  if (imagenFile) {
+    formData.append('imagen', imagenFile);
+  } else if (imagenUrl) {
+    formData.append('imagen', imagenUrl);
+  }
+  
+  try {
+    const url = id ? `${API}/productos/${id}` : `${API}/productos`;
+    const method = id ? 'PUT' : 'POST';
+    
+    await fetch(url, {
+      method,
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    
+    mostrarToast(id ? 'Producto actualizado' : 'Producto creado');
+    document.getElementById('formProducto').reset();
+    cargarProductosAdmin();
+    cargarProductos();
+  } catch {
+    mostrarToast('Error al guardar', 'error');
+  }
+});
+
+// ── PAGOS ADMIN ─────────────────────────────
 async function cargarPagosAdmin() {
   try {
     const res = await fetch(`${API}/ordenes`, {
@@ -702,16 +777,16 @@ async function cargarPagosAdmin() {
     });
     const data = await res.json();
     const container = document.getElementById('tabPagos');
-        
+    
     const pagosPendientes = (data.ordenes || []).filter(o => 
       o.metodoPago !== 'contraentrega' && o.estadoPago !== 'pagado'
     );
-        
+    
     container.innerHTML = `
       <h3>Pagos Pendientes</h3>
       ${pagosPendientes.length === 0 ? '<p>No hay pagos pendientes</p>' : `
         <table class="admin-table">
-          <thead><tr><th>ID</th><th>Usuario</th><th>Total</th><th>Metodo</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>ID</th><th>Usuario</th><th>Total</th><th>Método</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
             ${pagosPendientes.map(o => `
               <tr>
@@ -729,10 +804,10 @@ async function cargarPagosAdmin() {
           </tbody>
         </table>
       `}
-        
+      
       <h3 style="margin-top:2rem;">Historial de Pagos</h3>
       <table class="admin-table">
-        <thead><tr><th>ID</th><th>Usuario</th><th>Total</th><th>Metodo</th><th>Estado</th></tr></thead>
+        <thead><tr><th>ID</th><th>Usuario</th><th>Total</th><th>Método</th><th>Estado</th></tr></thead>
         <tbody>
           ${(data.ordenes || []).filter(o => o.metodoPago !== 'contraentrega').map(o => `
             <tr>
@@ -764,7 +839,7 @@ async function validarPago(id, estado) {
         estadoPago: estado
       })
     });
-        
+    
     const data = await res.json();
     if (data.ok) {
       mostrarToast(estado === 'pagado' ? 'Pago validado' : 'Pago rechazado');
@@ -775,10 +850,10 @@ async function validarPago(id, estado) {
   }
 }
 
-// CONFIG ADMIN
+// ── CONFIG ADMIN ────────────────────────────
 async function cargarConfigAdmin() {
   const metodos = ['yape', 'plin'];
-    
+  
   for (const metodo of metodos) {
     try {
       const res = await fetch(`${API}/config/imagen_pago_${metodo}`);
@@ -799,17 +874,17 @@ async function subirImagenPago(metodo) {
     mostrarToast('Selecciona una imagen', 'error');
     return;
   }
-    
+  
   const formData = new FormData();
   formData.append('imagen', fileInput.files[0]);
-    
+  
   try {
     const res = await fetch(`${API}/config/imagen_pago_${metodo}`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
-        
+    
     const data = await res.json();
     if (data.ok) {
       mostrarToast('Imagen de pago actualizada');
@@ -819,61 +894,3 @@ async function subirImagenPago(metodo) {
     mostrarToast('Error al subir imagen', 'error');
   }
 }
-
-// TOAST
-function mostrarToast(msg, tipo = 'success') {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.className = `toast ${tipo} show`;
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-// EVENT LISTENERS
-document.getElementById('loginPass')?.addEventListener('keypress', e => {
-  if (e.key === 'Enter') login();
-});
-
-document.getElementById('buscarInput')?.addEventListener('keypress', e => {
-  if (e.key === 'Enter') buscarProductos();
-});
-
-// Form submit para nuevo producto (con imagen)
-document.getElementById('formProducto')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const id = document.getElementById('productoId').value;
-  const formData = new FormData();
-    
-  formData.append('nombre', document.getElementById('nombre').value);
-  formData.append('categoria', document.getElementById('categoria').value);
-  formData.append('descripcion', document.getElementById('descripcion').value);
-  formData.append('precio', parseFloat(document.getElementById('precio').value));
-  formData.append('descuento', parseInt(document.getElementById('descuento').value) || 0);
-  formData.append('stock', parseInt(document.getElementById('stock').value));
-    
-  const imagenFile = document.getElementById('imagenFile').files[0];
-  const imagenUrl = document.getElementById('imagenUrl').value;
-    
-  if (imagenFile) {
-    formData.append('imagen', imagenFile);
-  } else if (imagenUrl) {
-    formData.append('imagen', imagenUrl);
-  }
-    
-  try {
-    const url = id ? `${API}/productos/${id}` : `${API}/productos`;
-    const method = id ? 'PUT' : 'POST';
-        
-    await fetch(url, {
-      method,
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
-        
-    mostrarToast(id ? 'Producto actualizado' : 'Producto creado');
-    document.getElementById('formProducto').reset();
-    cargarProductosAdmin();
-    cargarProductos();
-  } catch {
-    mostrarToast('Error al guardar', 'error');
-  }
-});
