@@ -194,7 +194,7 @@ function renderizarProductos(productos, containerId) {
     <div class="product-card" onclick="verProducto('${p._id}')">
       ${p.descuento ? `<div class="product-badge">-${p.descuento}%</div>` : ''}
       ${p.destacado ? `<div class="product-badge" style="background:#ffc107;left:auto;right:10px;"> Destacado</div>` : ''}
-      <img src="${getImagenUrl(p.imagen)}" alt="${p.nombre}" class="product-img" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x220/FF4747/white?text=Sin+Imagen';"/>
+      <img src="${getImagenUrl(p.imagen)}" alt="${p.nombre}" class="product-img" oneror="this.oneror=null;this.src='https://via.placeholder.com/300x220/FF4747/white?text=Sin+Imagen';"/>
       <div class="product-info">
         <div class="product-name">${p.nombre}</div>
         <div class="product-price">
@@ -251,7 +251,7 @@ async function verProducto(id) {
     body.innerHTML = `
       <div class="producto-detalle">
         <div class="producto-imagen">
-          <img src="${getImagenUrl(productoSeleccionado.imagen)}" alt="${productoSeleccionado.nombre}" style="width:100%;border-radius:8px;"/>
+          <img src="${productoSeleccionado.imagen}" alt="${productoSeleccionado.nombre}" style="width:100%;border-radius:8px;"/>
         </div>
         <div class="producto-info">
           <h2>${productoSeleccionado.nombre}</h2>
@@ -366,7 +366,7 @@ function renderizarCarrito() {
     
   container.innerHTML = carrito.map((item, i) => `
     <div class="cart-item">
-      <img src="${getImagenUrl(item.imagen) || 'https://via.placeholder.com/80'}" alt="${item.nombre}"/>
+      <img src="${item.imagen || 'https://via.placeholder.com/80'}" alt="${item.nombre}"/>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.nombre}</div>
         <div class="cart-item-price">S/ ${Number(item.precio).toFixed(2)}</div>
@@ -412,7 +412,7 @@ function checkout() {
     <div class="checkout-summary">
       ${carrito.map(item => `
         <div class="checkout-item">
-          <img src="${getImagenUrl(item.imagen)}" alt="${item.nombre}"/>
+          <img src="${item.imagen}" alt="${item.nombre}"/>
           <div style="flex:1;">
             <strong>${item.nombre}</strong><br/>
             <span style="color:#666;">Cantidad: ${item.cantidad}</span>
@@ -791,7 +791,7 @@ async function cargarConfigAdmin() {
       const data = await res.json();
       const preview = document.getElementById(`preview${metodo.charAt(0).toUpperCase() + metodo.slice(1)}`);
       if (data.valor) {
-        preview.innerHTML = `<img src="${data.valor}" alt="${metodo}" style="max-width:200px;margin-top:1rem;" onerror="this.onerror=null;this.src='https://via.placeholder.com/200x100/FF4747/white?text=Sin+Imagen';"/>`;
+        preview.innerHTML = `<img src="${data.valor}" alt="${metodo}" style="max-width:200px;margin-top:1rem;"/>`;
       }
     } catch {
       console.error(`Error cargando config ${metodo}`);
@@ -883,10 +883,3 @@ document.getElementById('formProducto')?.addEventListener('submit', async (e) =>
     mostrarToast('Error al guardar', 'error');
   }
 });
-
-// Función para obtener URL válida de imagen
-function getImagenUrl(imagen) {
-  if (!imagen) return 'https://via.placeholder.com/300x220/FF4747/white?text=Sin+Imagen';
-  if (imagen.startsWith('http')) return imagen;
-  return window.location.origin + '/' + imagen;
-}
