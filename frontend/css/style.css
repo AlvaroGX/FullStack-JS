@@ -24,7 +24,7 @@ body {
 
 .container { max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
 
-/* ── HEADER ──────────────────────────────────────── */
+/* ── HEADER ──────────────────────────────────── */
 .header { background: var(--primary); position: sticky; top: 0; z-index: 100; }
 .header-top {
   display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem;
@@ -326,4 +326,85 @@ body {
   .cart-sidebar { width: 100%; }
   .header-top { flex-wrap: wrap; }
   .search-bar { order: 3; flex-basis: 100%; }
+}
+
+/* ── PAGO CONTAINER ─────────────────────────── */
+.pago-container {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.pago-imagen-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: white;
+  border-radius: var(--radius);
+  border: 2px dashed var(--border);
+}
+
+.pago-imagen {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+.pago-proceso {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.pago-proceso .pago-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.pago-proceso h3 {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.pago-proceso p {
+  color: var(--text2);
+  margin-bottom: 1.5rem;
+}
+
+/* ── ESTADO BADGES ───────────────────────── */
+.estado-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.estado-badge.pendiente { background: #fff3cd; color: #856404; }
+.estado-badge.en_proceso { background: #cce5ff; color: #004085; }
+.estado-badge.verificando { background: #e2e3e5; color: #383d41; }
+.estado-badge.pagado { background: #d4edda; color: #155724; }
+.estado-badge.rechazado { background: #f8d7da; color: #721c24; }
+
+.config-section {
+  background: var(--bg2);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.config-section h4 {
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.config-section .file-upload {
+  margin-bottom: 1rem;
 }

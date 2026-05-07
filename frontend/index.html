@@ -149,10 +149,13 @@
       <div class="admin-tabs">
         <button class="tab-btn active" onclick="showTab('productos', this)">Productos</button>
         <button class="tab-btn" onclick="showTab('usuarios', this)">Usuarios</button>
+        <button class="tab-btn" onclick="showTab('pagos', this)">Pagos</button>
         <button class="tab-btn" onclick="showTab('nuevo', this)">Nuevo Producto</button>
+        <button class="tab-btn" onclick="showTab('config', this)">Configuración</button>
       </div>
       <div id="tabProductos" class="tab-content"></div>
       <div id="tabUsuarios" class="tab-content hidden"></div>
+      <div id="tabPagos" class="tab-content hidden"></div>
       <div id="tabNuevo" class="tab-content hidden">
         <form id="formProducto" class="admin-form" enctype="multipart/form-data">
           <input type="hidden" id="productoId"/>
@@ -171,6 +174,25 @@
           </div>
           <button type="submit" class="btn-primary full">Guardar Producto</button>
         </form>
+      </div>
+      <div id="tabConfig" class="tab-content hidden">
+        <h3>Configuración de Pagos</h3>
+        <div class="config-section">
+          <h4>Imagen para Yape</h4>
+          <div class="file-upload">
+            <input type="file" id="yapeFile" accept="image/*" class="input-field"/>
+            <button class="btn-primary" onclick="subirImagenPago('yape')">Subir</button>
+          </div>
+          <div id="previewYape"></div>
+        </div>
+        <div class="config-section">
+          <h4>Imagen para Plin</h4>
+          <div class="file-upload">
+            <input type="file" id="plinFile" accept="image/*" class="input-field"/>
+            <button class="btn-primary" onclick="subirImagenPago('plin')">Subir</button>
+          </div>
+          <div id="previewPlin"></div>
+        </div>
       </div>
     </div>
   </div>

@@ -65,10 +65,19 @@ router.get('/', auth, auth.admin, async (req, res) => {
 // Actualizar estado de orden (admin)
 router.put('/:id/estado', auth, auth.admin, async (req, res) => {
   try {
-    const { estado } = req.body;
+    const { estado, estadoPago } = req.body;
+    const updateData = { estado };
+    
+    if (estadoPago) {
+      updateData.estadoPago = estadoPago;
+      if (estadoPago === 'pagado') {
+        updateData.fechaPago = new Date();
+      }
+    }
+    
     const orden = await Orden.findByIdAndUpdate(
       req.params.id,
-      { estado },
+      updateData,
       { new: true }
     );
     res.json({ ok: true, mensaje: 'Estado actualizado', orden });

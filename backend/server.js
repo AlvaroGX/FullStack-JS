@@ -21,6 +21,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/productos', require('./routes/productos'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/ordenes', require('./routes/ordenes'));
+app.use('/api/config', require('./routes/config'));
 
 // Ruta de salud
 app.get('/api/health', (req, res) => {

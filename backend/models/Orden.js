@@ -37,8 +37,19 @@ const ordenSchema = new mongoose.Schema({
   },
   estado: {
     type: String,
-    enum: ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'],
+    enum: ['pendiente', 'procesando', 'pagado', 'enviado', 'entregado', 'cancelado'],
     default: 'pendiente'
+  },
+  estadoPago: {
+    type: String,
+    enum: ['pendiente', 'en_proceso', 'verificando', 'pagado', 'rechazado'],
+    default: 'pendiente'
+  },
+  comprobantePago: {
+    type: String
+  },
+  fechaPago: {
+    type: Date
   }
 }, {
   timestamps: true

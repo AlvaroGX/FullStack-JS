@@ -408,7 +408,7 @@ function checkout() {
     </div>
     <div class="form-group">
       <label>Método de pago:</label>
-      <select id="checkoutPago" class="input-field">
+      <select id="checkoutPago" class="input-field" onchange="mostrarImagenPago()">
         <option value="tarjeta">Tarjeta de Crédito/Débito</option>
         <option value="yape">Yape</option>
         <option value="plin">Plin</option>
@@ -416,11 +416,49 @@ function checkout() {
       </select>
     </div>
     
-    <button class="btn-primary full" style="margin-top:1rem;" onclick="procesarCompra()">
+    <div id="pagoContainer" class="pago-container hidden">
+      <div class="pago-imagen-container">
+        <img id="pagoImagen" src="" alt="Código de pago" class="pago-imagen"/>
+      </div>
+      <button class="btn-primary full" style="margin-top:1rem;" onclick="procesarCompra()">
+        Confirmar Pago - S/ ${total.toFixed(2)}
+      </button>
+    </div>
+    
+    <button class="btn-primary full" style="margin-top:1rem;" onclick="procesarCompra()" id="btnPagarNormal">
       Confirmar Compra - S/ ${total.toFixed(2)}
     </button>
   `;  
   document.getElementById('checkoutModal').classList.add('open');
+}
+
+async function mostrarImagenPago() {
+  const metodo = document.getElementById('checkoutPago').value;
+  const container = document.getElementById('pagoContainer');
+  const btnNormal = document.getElementById('btnPagarNormal');
+  
+  if (metodo === 'contraentrega') {
+    container.classList.add('hidden');
+    btnNormal.classList.remove('hidden');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API}/config/imagen_pago_${metodo}`);
+    const data = await res.json();
+    
+    if (data.valor) {
+      document.getElementById('pagoImagen').src = data.valor;
+      container.classList.remove('hidden');
+      btnNormal.classList.add('hidden');
+    } else {
+      container.classList.add('hidden');
+      btnNormal.classList.remove('hidden');
+    }
+  } catch {
+    container.classList.add('hidden');
+    btnNormal.classList.remove('hidden');
+  }
 }
 
 async function procesarCompra() {
@@ -454,11 +492,27 @@ async function procesarCompra() {
     
     const data = await res.json();
     if (data.ok) {
-      carrito = [];
-      guardarCarrito();
-      cerrarModal('checkoutModal');
-      cerrarModal('cartSidebar');
-      mostrarToast('¡Compra realizada con éxito!');
+      if (pago === 'contraentrega') {
+        carrito = [];
+        guardarCarrito();
+        cerrarModal('checkoutModal');
+        cerrarModal('cartSidebar');
+        mostrarToast('¡Compra realizada con éxito!');
+      } else {
+        // Mostrar mensaje de pago en proceso
+        const content = document.getElementById('checkoutContent');
+        content.innerHTML = `
+          <div class="pago-proceso">
+            <div class="pago-icon">⏳</div>
+            <h3>Pago en Proceso</h3>
+            <p>Tu pago está siendo verificado por el administrador.</p>
+            <p>Orden #: ${data.orden._id}</p>
+            <button class="btn-primary" onclick="cerrarModal('checkoutModal'); toggleCart();">Aceptar</button>
+          </div>
+        `;
+        carrito = [];
+        guardarCarrito();
+      }
     } else {
       mostrarToast(data.mensaje || 'Error al procesar compra', 'error');
     }
@@ -482,11 +536,15 @@ function showTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById('tabProductos').classList.add('hidden');
   document.getElementById('tabUsuarios').classList.add('hidden');
+  document.getElementById('tabPagos').classList.add('hidden');
   document.getElementById('tabNuevo').classList.add('hidden');
+  document.getElementById('tabConfig').classList.add('hidden');
   document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
   
   if (tab === 'productos') cargarProductosAdmin();
   if (tab === 'usuarios') cargarUsuariosAdmin();
+  if (tab === 'pagos') cargarPagosAdmin();
+  if (tab === 'config') cargarConfigAdmin();
 }
 
 async function cargarProductosAdmin() {
@@ -512,6 +570,44 @@ async function cargarProductosAdmin() {
       </tbody>
     </table>
   `;
+}
+
+async function editarProducto(id) {
+  try {
+    const res = await fetch(`${API}/productos/${id}`);
+    const data = await res.json();
+    if (!data.ok) return mostrarToast('Error al cargar producto', 'error');
+    
+    const p = data.producto;
+    document.getElementById('productoId').value = p._id;
+    document.getElementById('nombre').value = p.nombre;
+    document.getElementById('categoria').value = p.categoria;
+    document.getElementById('descripcion').value = p.descripcion || '';
+    document.getElementById('precio').value = p.precio;
+    document.getElementById('descuento').value = p.descuento || 0;
+    document.getElementById('stock').value = p.stock;
+    
+    showTab('nuevo', document.querySelector('.tab-btn[onclick*="nuevo"]'));
+    mostrarToast('Editando: ' + p.nombre);
+  } catch {
+    mostrarToast('Error al cargar producto', 'error');
+  }
+}
+
+async function eliminarProducto(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  
+  try {
+    await fetch(`${API}/productos/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    mostrarToast('Producto eliminado');
+    cargarProductosAdmin();
+    cargarProductos();
+  } catch {
+    mostrarToast('Error al eliminar', 'error');
+  }
 }
 
 async function cargarUsuariosAdmin() {
@@ -633,3 +729,129 @@ document.getElementById('formProducto')?.addEventListener('submit', async (e) =>
     mostrarToast('Error al guardar', 'error');
   }
 });
+
+// ── PAGOS ADMIN ─────────────────────────────
+async function cargarPagosAdmin() {
+  try {
+    const res = await fetch(`${API}/ordenes`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const container = document.getElementById('tabPagos');
+    
+    const pagosPendientes = (data.ordenes || []).filter(o => 
+      o.metodoPago !== 'contraentrega' && o.estadoPago !== 'pagado'
+    );
+    
+    container.innerHTML = `
+      <h3>Pagos Pendientes</h3>
+      ${pagosPendientes.length === 0 ? '<p>No hay pagos pendientes</p>' : `
+        <table class="admin-table">
+          <thead><tr><th>ID</th><th>Usuario</th><th>Total</th><th>Método</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            ${pagosPendientes.map(o => `
+              <tr>
+                <td>${o._id.slice(-8)}</td>
+                <td>${o.usuario?.nombre || 'N/A'}</td>
+                <td>S/ ${Number(o.total).toFixed(2)}</td>
+                <td>${o.metodoPago}</td>
+                <td><span class="estado-badge ${o.estadoPago}">${o.estadoPago}</span></td>
+                <td>
+                  <button class="btn-edit" onclick="validarPago('${o._id}', 'pagado')">Validar</button>
+                  <button class="btn-del" onclick="validarPago('${o._id}', 'rechazado')">Rechazar</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+      
+      <h3 style="margin-top:2rem;">Historial de Pagos</h3>
+      <table class="admin-table">
+        <thead><tr><th>ID</th><th>Usuario</th><th>Total</th><th>Método</th><th>Estado</th></tr></thead>
+        <tbody>
+          ${(data.ordenes || []).filter(o => o.metodoPago !== 'contraentrega').map(o => `
+            <tr>
+              <td>${o._id.slice(-8)}</td>
+              <td>${o.usuario?.nombre || 'N/A'}</td>
+              <td>S/ ${Number(o.total).toFixed(2)}</td>
+              <td>${o.metodoPago}</td>
+              <td><span class="estado-badge ${o.estadoPago}">${o.estadoPago}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch {
+    mostrarToast('Error cargando pagos', 'error');
+  }
+}
+
+async function validarPago(id, estado) {
+  try {
+    const res = await fetch(`${API}/ordenes/${id}/estado`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        estado: estado === 'pagado' ? 'pagado' : 'cancelado',
+        estadoPago: estado
+      })
+    });
+    
+    const data = await res.json();
+    if (data.ok) {
+      mostrarToast(estado === 'pagado' ? 'Pago validado' : 'Pago rechazado');
+      cargarPagosAdmin();
+    }
+  } catch {
+    mostrarToast('Error al validar pago', 'error');
+  }
+}
+
+// ── CONFIG ADMIN ────────────────────────────
+async function cargarConfigAdmin() {
+  const metodos = ['yape', 'plin'];
+  
+  for (const metodo of metodos) {
+    try {
+      const res = await fetch(`${API}/config/imagen_pago_${metodo}`);
+      const data = await res.json();
+      const preview = document.getElementById(`preview${metodo.charAt(0).toUpperCase() + metodo.slice(1)}`);
+      if (data.valor) {
+        preview.innerHTML = `<img src="${data.valor}" alt="${metodo}" style="max-width:200px;margin-top:1rem;"/>`;
+      }
+    } catch {
+      console.error(`Error cargando config ${metodo}`);
+    }
+  }
+}
+
+async function subirImagenPago(metodo) {
+  const fileInput = document.getElementById(`${metodo}File`);
+  if (!fileInput.files[0]) {
+    mostrarToast('Selecciona una imagen', 'error');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('imagen', fileInput.files[0]);
+  
+  try {
+    const res = await fetch(`${API}/config/imagen_pago_${metodo}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    
+    const data = await res.json();
+    if (data.ok) {
+      mostrarToast('Imagen de pago actualizada');
+      cargarConfigAdmin();
+    }
+  } catch {
+    mostrarToast('Error al subir imagen', 'error');
+  }
+}
