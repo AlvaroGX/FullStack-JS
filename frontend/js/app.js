@@ -73,6 +73,8 @@ async function login() {
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
       actualizarUI();
+      cargarProductos();
+      cargarFlashDeals();
       cerrarModal('loginModal');
       mostrarToast('Bienvenido ' + usuario.nombre);
       if (usuario.rol === 'admin') mostrarAdminPanel();
@@ -149,21 +151,54 @@ function actualizarUI() {
 async function cargarProductos() {
   const categoria = document.body.dataset.categoria || '';
   const orden = document.getElementById('ordenFiltro')?.value || '';
-    
+
   let url = `${API}/productos?activo=true`;
   if (categoria) url += `&categoria=${encodeURIComponent(categoria)}`;
   if (orden === 'precio-asc') url += '&orden=precio';
   if (orden === 'precio-desc') url += '&orden=-precio';
   if (orden === 'descuento') url += '&orden=descuento';
-    
+
   try {
     const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     console.log('Productos cargados:', data.productos?.length);
     renderizarProductos(data.productos || [], 'productosGrid');
   } catch (error) {
     console.error('Error cargando productos:', error);
-    mostrarToast('Error al cargar productos', 'error');
+    const grid = document.getElementById('productosGrid');
+    if (grid) grid.innerHTML = '<p style="text-align:center;grid-column:1/-1;padding:3rem;color:#666;">Error al cargar productos. <a href="#" onclick="cargarProductos()">Reintentar</a></p>';
+  }
+}
+
+async function cargarFlashDeals() {
+  try {
+    const res = await fetch(`${API}/productos?activo=true`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const ofertas = (data.productos || [])
+      .filter(p => p.descuento > 0)
+      .sort((a, b) => b.descuento - a.descuento)
+      .slice(0, 8);
+    renderizarProductos(ofertas, 'flashProducts');
+  } catch {
+    console.error('Error cargando ofertas');
+  }
+}
+
+// Recargar productos públicos (para usar después del login)
+function recargarProductos() {
+  cargarProductos();
+  cargarFlashDeals();
+}
+
+// Recargar productos públicos (para usar después del login)
+function recargarProductos() {
+  cargarProductos();
+  cargarFlashDeals();
+}
+  } catch {
+    console.log('No se pudo verificar sesión');
   }
 }
 
@@ -205,12 +240,6 @@ function renderizarProductos(productos, containerId) {
       </div>
     </div>
   `).join('');
-}
-
-function getImagenUrl(imagen) {
-  if (!imagen) return 'https://via.placeholder.com/300x220/FF4747/white?text=Sin+Imagen';
-  if (imagen.startsWith('http')) return imagen;
-  return window.location.origin + '/' + imagen;
 }
 
 function filtrarCategoria(cat, btn, orden) {
@@ -843,40 +872,96 @@ document.getElementById('buscarInput')?.addEventListener('keypress', e => {
   if (e.key === 'Enter') buscarProductos();
 });
 
+// Drag and drop + preview de imagen
+const dropZone = document.getElementById('dropZone');
+const imagenFileInput = document.getElementById('imagenFile');
+const imagePreview = document.getElementById('imagePreview');
+const previewImg = document.getElementById('previewImg');
+let droppedFile = null;
+
+if (dropZone) {
+  ['dragenter', 'dragover'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('dragover'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('dragover'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      droppedFile = file;
+      showImagePreview(file);
+    }
+  });
+  dropZone.addEventListener('click', () => imagenFileInput.click());
+  imagenFileInput.addEventListener('change', () => {
+    droppedFile = null;
+    if (imagenFileInput.files[0]) showImagePreview(imagenFileInput.files[0]);
+  });
+}
+
+function showImagePreview(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewImg.src = e.target.result;
+    imagePreview.classList.remove('hidden');
+    document.getElementById('imagenUrl').value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewFromUrl(url) {
+  if (url && url.startsWith('http')) {
+    previewImg.src = url;
+    imagePreview.classList.remove('hidden');
+    imagenFileInput.value = '';
+    droppedFile = null;
+  }
+}
+
+function removeImage() {
+  imagenFileInput.value = '';
+  droppedFile = null;
+  document.getElementById('imagenUrl').value = '';
+  imagePreview.classList.add('hidden');
+  previewImg.src = '';
+}
+
 // Form submit para nuevo producto (con imagen)
 document.getElementById('formProducto')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('productoId').value;
   const formData = new FormData();
-    
+
   formData.append('nombre', document.getElementById('nombre').value);
   formData.append('categoria', document.getElementById('categoria').value);
   formData.append('descripcion', document.getElementById('descripcion').value);
   formData.append('precio', parseFloat(document.getElementById('precio').value));
   formData.append('descuento', parseInt(document.getElementById('descuento').value) || 0);
   formData.append('stock', parseInt(document.getElementById('stock').value));
-    
-  const imagenFile = document.getElementById('imagenFile').files[0];
+
+  const imagenFile = droppedFile || imagenFileInput.files[0];
   const imagenUrl = document.getElementById('imagenUrl').value;
-    
+
   if (imagenFile) {
     formData.append('imagen', imagenFile);
   } else if (imagenUrl) {
     formData.append('imagen', imagenUrl);
   }
-    
+
   try {
     const url = id ? `${API}/productos/${id}` : `${API}/productos`;
     const method = id ? 'PUT' : 'POST';
-        
+
     await fetch(url, {
       method,
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
-        
+
     mostrarToast(id ? 'Producto actualizado' : 'Producto creado');
     document.getElementById('formProducto').reset();
+    removeImage();
     cargarProductosAdmin();
     cargarProductos();
   } catch {
@@ -888,5 +973,6 @@ document.getElementById('formProducto')?.addEventListener('submit', async (e) =>
 function getImagenUrl(imagen) {
   if (!imagen) return 'https://via.placeholder.com/300x220/FF4747/white?text=Sin+Imagen';
   if (imagen.startsWith('http')) return imagen;
-  return window.location.origin + '/' + imagen;
+  const normalizedPath = imagen.startsWith('/') ? imagen : '/' + imagen;
+  return window.location.origin + normalizedPath;
 }

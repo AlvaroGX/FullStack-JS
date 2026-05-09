@@ -11,6 +11,11 @@
 </head>
 <body>
 
+  <!-- ADMIN CREDENTIALS BAR -->
+  <div class="admin-creds-bar">
+    <span>👑 Admin: <strong>admin@temu.com</strong> / <strong>admin123</strong></span>
+  </div>
+
   <!-- HEADER TEMU STYLE -->
   <header class="header">
     <div class="header-top">
@@ -176,8 +181,19 @@
           <input type="number" id="stock" placeholder="Stock" required class="input-field"/>
           <div class="file-upload">
             <label>Imagen del producto:</label>
-            <input type="file" id="imagenFile" accept="image/*" class="input-field"/>
-            <small>O sube una URL: <input type="text" id="imagenUrl" placeholder="https://..." class="input-field" style="margin-top:0.5rem;"></small>
+            <div class="drop-zone" id="dropZone">
+              <div class="drop-zone-content">
+                <span class="drop-icon">📁</span>
+                <p>Arrastra una imagen aquí o haz clic para seleccionar</p>
+                <span class="drop-hint">PNG, JPG, GIF hasta 5MB</span>
+              </div>
+              <input type="file" id="imagenFile" accept="image/*" class="drop-input"/>
+            </div>
+            <div id="imagePreview" class="image-preview hidden">
+              <img id="previewImg" src="" alt="Vista previa"/>
+              <button type="button" class="btn-remove" onclick="removeImage()">✕</button>
+            </div>
+            <small>O sube una URL: <input type="text" id="imagenUrl" placeholder="https://..." class="input-field" style="margin-top:0.5rem;" oninput="previewFromUrl(this.value)"></small>
           </div>
           <button type="submit" class="btn-primary full">Guardar Producto</button>
         </form>
