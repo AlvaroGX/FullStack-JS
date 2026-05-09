@@ -186,36 +186,6 @@ async function cargarFlashDeals() {
   }
 }
 
-// Recargar productos públicos (para usar después del login)
-function recargarProductos() {
-  cargarProductos();
-  cargarFlashDeals();
-}
-
-// Recargar productos públicos (para usar después del login)
-function recargarProductos() {
-  cargarProductos();
-  cargarFlashDeals();
-}
-  } catch {
-    console.log('No se pudo verificar sesión');
-  }
-}
-
-async function cargarFlashDeals() {
-  try {
-    const res = await fetch(`${API}/productos?activo=true`);
-    const data = await res.json();
-    const ofertas = (data.productos || [])
-      .filter(p => p.descuento > 0)
-      .sort((a, b) => b.descuento - a.descuento)
-      .slice(0, 8);
-    renderizarProductos(ofertas, 'flashProducts');
-  } catch {
-    console.error('Error cargando ofertas');
-  }
-}
-
 function renderizarProductos(productos, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
