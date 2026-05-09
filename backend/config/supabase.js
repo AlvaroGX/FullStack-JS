@@ -42,12 +42,22 @@ async function subirImagen(buffer, nombreOriginal, contentType) {
   return publicUrl;
 }
 
+function snakeToCamel(str) {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
 function mapearId(item) {
   if (!item) return item;
   if (Array.isArray(item)) {
-    return item.map(i => ({ ...i, _id: i.id }));
+    return item.map(i => mapearId(i));
   }
-  return { ...item, _id: item.id };
+  const result = { ...item, _id: item.id };
+  for (const key of Object.keys(item)) {
+    if (key.includes('_')) {
+      result[snakeToCamel(key)] = item[key];
+    }
+  }
+  return result;
 }
 
 module.exports = { supabase, subirImagen, mapearId };
