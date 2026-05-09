@@ -1,20 +1,20 @@
 {
   "name": "inventario-app",
   "version": "1.0.0",
-  "description": "Gestión de inventario fullstack con Node.js, Express y MongoDB",
+  "description": "Gestión de inventario fullstack con Node.js, Express y Supabase",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.3",
-    "mongodb": "^7.2.0",
-    "mongoose": "^8.23.1",
+
     "multer": "^2.1.1",
     "node-fetch": "^3.3.2"
   },

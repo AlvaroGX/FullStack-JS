@@ -37,12 +37,14 @@ function mostrarLogin() {
   document.getElementById('loginForm').classList.remove('hidden');
   document.getElementById('registroForm').classList.add('hidden');
   document.getElementById('modalTitle').textContent = 'Iniciar Sesion';
+  document.getElementById('formError').classList.remove('show');
 }
 
 function mostrarRegistro() {
   document.getElementById('loginForm').classList.add('hidden');
   document.getElementById('registroForm').classList.remove('hidden');
   document.getElementById('modalTitle').textContent = 'Registrarse';
+  document.getElementById('formError').classList.remove('show');
 }
 
 function abrirLogin() {
@@ -73,14 +75,21 @@ async function login() {
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
       actualizarUI();
-      cargarProductos();
-      cargarFlashDeals();
+      if (usuario.rol === 'admin') {
+        mostrarAdminPanel();
+      } else {
+        document.getElementById('heroSection').style.display = '';
+        document.getElementById('flashDeals').style.display = '';
+        document.getElementById('productosSection').style.display = '';
+        document.getElementById('adminPanel').classList.add('hidden');
+        cargarProductos();
+        cargarFlashDeals();
+      }
       cerrarModal('loginModal');
       mostrarToast('Bienvenido ' + usuario.nombre);
-      if (usuario.rol === 'admin') mostrarAdminPanel();
     } else {
       errorDiv.textContent = data.mensaje;
-      errorDiv.classList.remove('hidden');
+      errorDiv.classList.add('show');
     }
   } catch {
     mostrarToast('Error de conexion', 'error');
@@ -95,7 +104,7 @@ async function registro() {
     
   if (password.length < 6) {
     errorDiv.textContent = 'La contrasena debe tener al menos 6 caracteres';
-    errorDiv.classList.remove('hidden');
+    errorDiv.classList.add('show');
     return;
   }
     
@@ -116,7 +125,7 @@ async function registro() {
       mostrarToast('Cuenta creada exitosamente');
     } else {
       errorDiv.textContent = data.mensaje;
-      errorDiv.classList.remove('hidden');
+      errorDiv.classList.add('show');
     }
   } catch {
     mostrarToast('Error de conexion', 'error');
@@ -130,6 +139,11 @@ function logout() {
   localStorage.removeItem('usuario');
   actualizarUI();
   document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('heroSection').style.display = '';
+  document.getElementById('flashDeals').style.display = '';
+  document.getElementById('productosSection').style.display = '';
+  cargarProductos();
+  cargarFlashDeals();
   mostrarToast('Sesion cerrada');
 }
 

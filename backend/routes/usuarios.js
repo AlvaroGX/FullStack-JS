@@ -1,33 +1,43 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Usuario = require('../models/Usuario');
+const { supabase, mapearId } = require('../config/supabase');
 
-// Obtener todos los usuarios (solo admin)
 router.get('/', auth, auth.admin, async (req, res) => {
   try {
-    const usuarios = await Usuario.find().select('-password').sort({ createdAt: -1 });
-    res.json({ ok: true, usuarios });
+    const { data: usuarios, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre, email, rol, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ ok: true, usuarios: mapearId(usuarios) });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: 'Error al obtener usuarios' });
   }
 });
 
-// Cambiar rol de usuario (solo admin)
 router.put('/:id/rol', auth, auth.admin, async (req, res) => {
   try {
     const { rol } = req.body;
-    const usuario = await Usuario.findByIdAndUpdate(req.params.id, { rol }, { new: true }).select('-password');
-    res.json({ ok: true, mensaje: 'Rol actualizado', usuario });
+    const { data: usuario, error } = await supabase
+      .from('usuarios')
+      .update({ rol })
+      .eq('id', req.params.id)
+      .select('id, nombre, email, rol, created_at')
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json({ ok: true, mensaje: 'Rol actualizado', usuario: mapearId(usuario) });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: 'Error al actualizar rol' });
   }
 });
 
-// Eliminar usuario (solo admin)
 router.delete('/:id', auth, auth.admin, async (req, res) => {
   try {
-    await Usuario.findByIdAndDelete(req.params.id);
+    const { error } = await supabase.from('usuarios').delete().eq('id', req.params.id);
+    if (error) throw error;
     res.json({ ok: true, mensaje: 'Usuario eliminado' });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: 'Error al eliminar usuario' });

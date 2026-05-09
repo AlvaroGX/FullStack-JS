@@ -1,155 +1,127 @@
-# InventApp — HT-02 Fullstack con Node.js
+# InventApp — Fullstack con Node.js + Supabase
 
-Aplicación fullstack de **gestión de inventario** desarrollada con:
-- **Backend**: Node.js + Express.js (entorno de ejecución JavaScript)
-- **Base de datos**: MongoDB Atlas (gratuito en la nube)
+Aplicación fullstack de **gestión de inventario (e-commerce)** desarrollada con:
+- **Backend**: Node.js + Express.js
+- **Base de datos**: Supabase (PostgreSQL)
 - **Frontend**: HTML + CSS + JavaScript vanilla
-- **Deploy**: Render.com (hosting gratuito)
+- **Deploy**: Render.com
 
 ---
 
-## 📁 Estructura del proyecto
+## Estructura del proyecto
 
 ```
 inventario-app/
 ├── backend/
-│   ├── models/
-│   │   └── Producto.js      # Modelo Mongoose
+│   ├── config/
+│   │   └── supabase.js        # Cliente Supabase
+│   ├── middleware/
+│   │   ├── auth.js            # JWT + rol admin
+│   │   └── upload.js          # Multer (imágenes)
 │   ├── routes/
-│   │   └── productos.js     # Rutas CRUD de la API REST
-│   └── server.js            # Servidor Express principal
+│   │   ├── auth.js            # Login/registro/perfil
+│   │   ├── productos.js       # CRUD productos + stats
+│   │   ├── ordenes.js         # Órdenes de compra
+│   │   ├── usuarios.js        # CRUD usuarios (admin)
+│   │   ├── config.js          # Configuración dinámica
+│   │   └── chat.js            # Chat con Gemini AI
+│   ├── migration.sql          # Esquema para Supabase
+│   └── server.js              # Servidor Express principal
 ├── frontend/
-│   ├── css/
-│   │   └── style.css        # Estilos de la interfaz
-│   ├── js/
-│   │   └── app.js           # Lógica del frontend
-│   └── index.html           # Página principal
-├── .env.example             # Variables de entorno de ejemplo
+│   ├── css/style.css
+│   ├── js/app.js
+│   └── index.html
+├── .env.example
 ├── .gitignore
 └── package.json
 ```
 
 ---
 
-## 🚀 Instalación y uso local
+## Instalación y uso local
 
-### 1. Clonar o descargar el proyecto
+### 1. Clonar e instalar dependencias
 
 ```bash
 git clone <tu-repo>
 cd inventario-app
-```
-
-### 2. Instalar dependencias
-
-```bash
 npm install
 ```
 
-### 3. Configurar MongoDB Atlas (GRATIS)
+### 2. Configurar Supabase (GRATIS)
 
-1. Ve a [mongodb.com/atlas](https://www.mongodb.com/atlas) y crea una cuenta gratis
-2. Crea un **Cluster gratuito** (M0 Sandbox)
-3. En **Database Access** → crea un usuario con contraseña
-4. En **Network Access** → agrega `0.0.0.0/0` (acceso desde cualquier IP)
-5. En **Connect** → elige "Connect your application" → copia el URI
+1. Ve a [supabase.com](https://supabase.com) y crea una cuenta gratis
+2. Crea un **nuevo proyecto** (elige región cercana a ti)
+3. Ve a **SQL Editor** → pega el contenido de `backend/migration.sql` → ejecuta
+4. Ve a **Project Settings > API** → copia:
+   - **URL** (Project URL)
+   - **anon/public key** (API Key)
 
-### 4. Crear el archivo `.env`
+### 3. Crear el archivo `.env`
 
 ```bash
 cp .env.example .env
 ```
 
-Edita `.env` y pega tu URI de MongoDB:
+Edita `.env` y pega tus credenciales de Supabase:
 
 ```env
-MONGODB_URI=mongodb+srv://usuario:password@cluster0.xxxxx.mongodb.net/inventario?retryWrites=true&w=majority
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_KEY=eyJhbGciOiJI...tu-api-key...
+JWT_SECRET=una_clave_secreta_segura
 PORT=3000
 ```
 
-### 5. Ejecutar el servidor
+### 4. Ejecutar el servidor
 
 ```bash
-# Desarrollo (con recarga automática)
-npm run dev
-
-# Producción
-npm start
+npm run dev   # Desarrollo (nodemon)
+npm start     # Producción
 ```
 
-Abre el navegador en: **http://localhost:3000**
+Abre: **http://localhost:3000**
+
+Credenciales admin por defecto: `admin@temu.com` / `admin123`
 
 ---
 
-## 🌐 Deploy en Render.com (GRATUITO)
+## API REST — Endpoints
 
-### 1. Subir el proyecto a GitHub
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| POST | `/api/auth/login` | Iniciar sesión | No |
+| POST | `/api/auth/registro` | Registrar usuario | No |
+| GET | `/api/auth/perfil` | Perfil del usuario | JWT |
+| GET | `/api/productos` | Listar productos | No |
+| GET | `/api/productos/:id` | Obtener producto | No |
+| POST | `/api/productos` | Crear producto | No* |
+| PUT | `/api/productos/:id` | Actualizar producto | No* |
+| DELETE | `/api/productos/:id` | Eliminar producto | No* |
+| GET | `/api/productos/stats/resumen` | Estadísticas | No |
+| GET | `/api/ordenes/mis-ordenes` | Mis órdenes | JWT |
+| GET | `/api/ordenes` | Todas las órdenes | Admin |
+| POST | `/api/ordenes` | Crear orden | JWT |
+| PUT | `/api/ordenes/:id/estado` | Actualizar estado | Admin |
+| GET | `/api/usuarios` | Listar usuarios | Admin |
+| PUT | `/api/usuarios/:id/rol` | Cambiar rol | Admin |
+| DELETE | `/api/usuarios/:id` | Eliminar usuario | Admin |
+| GET | `/api/config/:clave` | Obtener config | No |
+| PUT | `/api/config/:clave` | Actualizar config | Admin |
+| GET | `/api/health` | Health check | No |
 
-```bash
-git init
-git add .
-git commit -m "HT-02: Fullstack inventario con Node.js"
-git remote add origin https://github.com/tuusuario/inventario-app.git
-git push -u origin main
-```
-
-### 2. Crear servicio en Render
-
-1. Ve a [render.com](https://render.com) y crea cuenta gratis
-2. **New** → **Web Service**
-3. Conecta tu repositorio de GitHub
-4. Configura:
-   - **Name**: inventario-app
-   - **Environment**: Node
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-5. En **Environment Variables** agrega:
-   - `MONGODB_URI` → tu URI de Atlas
-   - `NODE_ENV` → `production`
-6. Click en **Create Web Service**
-
-¡Listo! En 2-3 minutos tendrás tu app en una URL pública gratis.
+*\* Endpoints de productos no requieren auth (por definir)*
 
 ---
 
-## 📡 API REST — Endpoints
-
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/productos` | Listar todos los productos |
-| GET | `/api/productos/:id` | Obtener un producto |
-| POST | `/api/productos` | Crear producto |
-| PUT | `/api/productos/:id` | Actualizar producto |
-| DELETE | `/api/productos/:id` | Eliminar producto |
-| GET | `/api/productos/stats/resumen` | Estadísticas del inventario |
-| GET | `/api/health` | Estado del servidor |
-
-### Parámetros de búsqueda (GET /api/productos)
-- `?buscar=laptop` — Búsqueda por nombre
-- `?categoria=Electrónica` — Filtrar por categoría
-- `?orden=nombre|precio|stock` — Ordenar resultados
-
-### Ejemplo de producto (JSON)
-```json
-{
-  "nombre": "Laptop Dell XPS",
-  "categoria": "Electrónica",
-  "descripcion": "Laptop de alto rendimiento",
-  "precio": 3500.00,
-  "stock": 15,
-  "unidad": "unidad"
-}
-```
-
----
-
-## 🛠 Tecnologías usadas (HT-02)
+## Tecnologías usadas
 
 | Capa | Tecnología | Rol |
 |------|-----------|-----|
-| Entorno de ejecución | **Node.js** | Ejecuta JavaScript en el servidor |
-| Framework backend | **Express.js** | API REST y servidor web |
-| Base de datos | **MongoDB + Mongoose** | Almacenamiento de datos |
+| Entorno | **Node.js** | Ejecuta JS en servidor |
+| Framework | **Express.js** | API REST + web server |
+| Base de datos | **Supabase (PostgreSQL)** | Almacenamiento |
 | Frontend | **HTML/CSS/JS** | Interfaz de usuario |
-| Hosting | **Render.com** | Deploy gratuito |
-| DB Cloud | **MongoDB Atlas** | BD gratuita en la nube |
+| Imágenes | **Multer** | Upload de archivos |
+| Auth | **JWT + bcryptjs** | Autenticación |
+| IA | **Gemini API** | Chat asistente |
+| Hosting | **Render.com** | Deploy |
